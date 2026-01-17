@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>스토리 구성 웹학습지</title>
+  <meta name="description" content="나만의 4컷 스토리를 만들어보세요! 학급용과 개인용을 선택할 수 있습니다.">
+  <meta name="theme-color" content="#4A90D9">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="스토리 구성 웹학습지">
+  <meta property="og:description" content="나만의 4컷 스토리를 만들어보세요!">
+  <meta property="og:type" content="website">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #4A90D9;
+      --primary-light: #e8f2ff;
+      --primary-dark: #2563eb;
+      --text: #333333;
+      --text-light: #666666;
+      --border: #e0e0e0;
+      --orange: #ff9f43;
+      --orange-light: #fff0e3;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Noto Sans KR', system-ui, sans-serif;
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #f8faff 0%, #f0f4ff 50%, #faf8ff 100%);
+      overflow-x: hidden;
+    }
+
+    .title-handwriting {
+      font-family: 'Nanum Pen Script', cursive;
+    }
+
+    /* Landing Wrapper */
+    .landing-wrapper {
+      min-height: 100vh;
+      position: relative;
+      padding: 20px 16px 40px;
+    }
+
+    /* Background Decoration */
+    .bg-decoration {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .floating-shape {
+      position: absolute;
+      font-size: 2.5rem;
+      opacity: 0.12;
+      animation: float 8s ease-in-out infinite;
+    }
+
+    .shape-1 { top: 8%; left: 8%; animation-delay: 0s; }
+    .shape-2 { top: 15%; right: 12%; animation-delay: 2s; }
+    .shape-3 { bottom: 25%; left: 5%; animation-delay: 4s; }
+    .shape-4 { bottom: 10%; right: 8%; animation-delay: 6s; }
+    .shape-5 { top: 45%; left: 3%; animation-delay: 1s; font-size: 1.8rem; }
+    .shape-6 { top: 35%; right: 5%; animation-delay: 3s; font-size: 1.8rem; }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0) rotate(0deg); }
+      50% { transform: translateY(-25px) rotate(8deg); }
+    }
+
+    /* Container */
+    .container {
+      max-width: 520px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Hero Section */
+    .hero {
+      text-align: center;
+      padding: 50px 20px 40px;
+    }
+
+    .hero-icon-wrapper {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 24px;
+    }
+
+    .hero-icon {
+      font-size: 5rem;
+      position: relative;
+      z-index: 1;
+      animation: bounce 2.5s ease-in-out infinite;
+    }
+
+    .hero-icon-ring {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-light) 0%, rgba(255,255,255,0) 70%);
+      animation: pulse-ring 2.5s ease-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes pulse-ring {
+      0% { transform: translate(-50%, -50%) scale(0.8); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+    }
+
+    .hero-title {
+      font-size: 2.8rem;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.2;
+    }
+
+    .title-highlight {
+      color: var(--primary);
+      position: relative;
+      display: inline-block;
+    }
+
+    .title-highlight::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      left: -4px;
+      right: -4px;
+      height: 12px;
+      background: var(--primary-light);
+      z-index: -1;
+      border-radius: 4px;
+    }
+
+    .hero-subtitle {
+      color: var(--text-light);
+      font-size: 1.1rem;
+    }
+
+    /* Main Card */
+    .main-card {
+      background: white;
+      border-radius: 24px;
+      padding: 32px 24px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+    }
+
+    .section-label {
+      text-align: center;
+      color: var(--text-light);
+      font-size: 1rem;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+
+    /* Mode Cards */
+    .mode-cards {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .mode-card {
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      text-decoration: none;
+      display: block;
+    }
+
+    .mode-card-inner {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      transition: all 0.3s;
+    }
+
+    .mode-classroom .mode-card-inner {
+      border-color: #e3f0ff;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
+    }
+
+    .mode-personal .mode-card-inner {
+      border-color: var(--orange-light);
+      background: linear-gradient(135deg, #ffffff 0%, #fffbf8 100%);
+    }
+
+    .mode-card:hover {
+      transform: translateY(-4px);
+    }
+
+    .mode-card:hover .mode-card-inner {
+      box-shadow: 0 12px 28px rgba(0,0,0,0.12);
+    }
+
+    .mode-classroom:hover .mode-card-inner {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, #f0f7ff 0%, #e8f2ff 100%);
+    }
+
+    .mode-personal:hover .mode-card-inner {
+      border-color: var(--orange);
+      background: linear-gradient(135deg, #fff8f0 0%, #fff2e6 100%);
+    }
+
+    .mode-icon-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .mode-icon {
+      font-size: 3rem;
+    }
+
+    .mode-badge {
+      font-size: 0.7rem;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .mode-classroom .mode-badge {
+      background: #e3f0ff;
+      color: var(--primary);
+    }
+
+    .mode-personal .mode-badge {
+      background: var(--orange-light);
+      color: #e67e22;
+    }
+
+    .mode-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .mode-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .mode-desc {
+      font-size: 0.9rem;
+      color: var(--text-light);
+      line-height: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .mode-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      list-style: none;
+    }
+
+    .mode-features li {
+      font-size: 0.75rem;
+      color: var(--text-light);
+      background: rgba(0,0,0,0.04);
+      padding: 4px 10px;
+      border-radius: 8px;
+    }
+
+    .mode-arrow {
+      color: var(--text-light);
+      transition: all 0.3s;
+      flex-shrink: 0;
+    }
+
+    .mode-arrow svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .mode-card:hover .mode-arrow {
+      transform: translateX(4px);
+    }
+
+    .mode-classroom:hover .mode-arrow {
+      color: var(--primary);
+    }
+
+    .mode-personal:hover .mode-arrow {
+      color: var(--orange);
+    }
+
+    /* Info Section */
+    .info-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .info-item {
+      text-align: center;
+      padding: 16px;
+      background: #f8fafc;
+      border-radius: 12px;
+    }
+
+    .info-item-icon {
+      font-size: 1.5rem;
+      margin-bottom: 8px;
+    }
+
+    .info-item-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .info-item-desc {
+      font-size: 0.75rem;
+      color: var(--text-light);
+    }
+
+    /* Footer */
+    .landing-footer {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--text-light);
+      font-size: 0.85rem;
+    }
+
+    .landing-footer p {
+      margin-bottom: 12px;
+    }
+
+    .footer-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-light);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+
+    .footer-link:hover {
+      color: var(--primary);
+    }
+
+    .footer-link svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Responsive */
+    @media (max-width: 480px) {
+      .hero-title {
+        font-size: 2.2rem;
+      }
+
+      .hero-icon {
+        font-size: 4rem;
+      }
+
+      .mode-card-inner {
+        padding: 16px;
+      }
+
+      .mode-icon {
+        font-size: 2.5rem;
+      }
+
+      .mode-features {
+        display: none;
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Fade In Animation */
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .fade-in-delay-1 { animation-delay: 0.1s; animation-fill-mode: both; }
+    .fade-in-delay-2 { animation-delay: 0.2s; animation-fill-mode: both; }
+    .fade-in-delay-3 { animation-delay: 0.3s; animation-fill-mode: both; }
+  </style>
+</head>
+<body>
+  <div class="landing-wrapper">
+    <!-- Background Decoration -->
+    <div class="bg-decoration">
+      <div class="floating-shape shape-1">✨</div>
+      <div class="floating-shape shape-2">📖</div>
+      <div class="floating-shape shape-3">🌟</div>
+      <div class="floating-shape shape-4">✏️</div>
+      <div class="floating-shape shape-5">🎨</div>
+      <div class="floating-shape shape-6">💡</div>
+    </div>
+
+    <div class="container">
+      <!-- Hero Section -->
+      <div class="hero fade-in">
+        <div class="hero-icon-wrapper">
+          <div class="hero-icon">📚</div>
+          <div class="hero-icon-ring"></div>
+        </div>
+        <h1 class="hero-title title-handwriting">
+          스토리 구성<br>
+          <span class="title-highlight">웹학습지</span>
+        </h1>
+        <p class="hero-subtitle">
+          상상력을 펼쳐 나만의 4컷 스토리를 만들어보세요!
+        </p>
+      </div>
+
+      <!-- Main Card -->
+      <div class="main-card fade-in fade-in-delay-1">
+        <p class="section-label">어떻게 사용하실 건가요?</p>
+
+        <!-- Mode Cards -->
+        <div class="mode-cards">
+          <!-- Classroom Mode -->
+          <a href="#classroom" class="mode-card mode-classroom" id="classroomCard">
+            <div class="mode-card-inner">
+              <div class="mode-icon-area">
+                <div class="mode-icon">👩‍🏫</div>
+                <span class="mode-badge">학급 모드</span>
+              </div>
+              <div class="mode-content">
+                <h3 class="mode-title">선생님이에요</h3>
+                <p class="mode-desc">
+                  학급을 만들고 학생들의 작품을 관리할 수 있어요
+                </p>
+                <ul class="mode-features">
+                  <li>📋 학생 관리</li>
+                  <li>📊 작품 현황</li>
+                  <li>📱 QR 로그인</li>
+                </ul>
+              </div>
+              <div class="mode-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </div>
+          </a>
+
+          <!-- Personal Mode -->
+          <a href="#personal" class="mode-card mode-personal" id="personalCard">
+            <div class="mode-card-inner">
+              <div class="mode-icon-area">
+                <div class="mode-icon">🎨</div>
+                <span class="mode-badge">개인 모드</span>
+              </div>
+              <div class="mode-content">
+                <h3 class="mode-title">개인 사용자에요</h3>
+                <p class="mode-desc">
+                  계정을 만들어 나만의 스토리를 자유롭게 만들어요
+                </p>
+                <ul class="mode-features">
+                  <li>🚀 바로 시작</li>
+                  <li>🤖 AI 도우미</li>
+                  <li>☁️ 클라우드 저장</li>
+                </ul>
+              </div>
+              <div class="mode-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+            </div>
+          </a>
+        </div>
+
+        <!-- Info Section -->
+        <div class="info-section fade-in fade-in-delay-2">
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="info-item-icon">🔒</div>
+              <div class="info-item-title">안전한 저장</div>
+              <div class="info-item-desc">작품이 안전하게 보관돼요</div>
+            </div>
+            <div class="info-item">
+              <div class="info-item-icon">📱</div>
+              <div class="info-item-title">모든 기기</div>
+              <div class="info-item-desc">PC, 태블릿, 모바일 지원</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="landing-footer fade-in fade-in-delay-3">
+        <p>4컷 스토리 → AI 그림책 변환을 위한 웹학습지</p>
+        <a href="https://github.com/story-creator" target="_blank" class="footer-link">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub에서 더 알아보기
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal for Classroom Mode -->
+  <div id="classroomModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 20px; max-width: 400px; width: 100%; padding: 32px 24px; text-align: center; animation: fadeIn 0.3s ease-out;">
+      <div style="font-size: 3rem; margin-bottom: 16px;">👩‍🏫</div>
+      <h2 style="font-size: 1.3rem; margin-bottom: 12px; color: var(--text);">학급 모드 안내</h2>
+      <p style="color: var(--text-light); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6;">
+        학급 모드는 선생님이 직접 <strong>Google 스프레드시트</strong>에 시스템을 설치하는 방식입니다.
+        <br><br>
+        아래 가이드를 따라 설치하시면 됩니다.
+      </p>
+      <a href="./GAS-DEPLOYMENT-GUIDE.md" target="_blank" style="display: block; background: var(--primary); color: white; padding: 14px 24px; border-radius: 12px; text-decoration: none; font-weight: 600; margin-bottom: 12px;">
+        📖 설치 가이드 보기
+      </a>
+      <button onclick="closeModal('classroomModal')" style="background: none; border: none; color: var(--text-light); cursor: pointer; padding: 8px 16px;">
+        닫기
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal for Personal Mode -->
+  <div id="personalModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 100; justify-content: center; align-items: center; padding: 20px;">
+    <div style="background: white; border-radius: 20px; max-width: 400px; width: 100%; padding: 32px 24px; text-align: center; animation: fadeIn 0.3s ease-out;">
+      <div style="font-size: 3rem; margin-bottom: 16px;">🎨</div>
+      <h2 style="font-size: 1.3rem; margin-bottom: 12px; color: var(--text);">개인 모드</h2>
+      <p style="color: var(--text-light); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.6;">
+        개인 모드는 계정을 만들어 자유롭게 스토리를 만들 수 있습니다.
+        <br><br>
+        Google 또는 이메일로 간편하게 시작하세요!
+      </p>
+      <a href="./personal/" style="display: block; background: var(--orange); color: white; padding: 14px 24px; border-radius: 12px; text-decoration: none; font-weight: 600; margin-bottom: 12px;">
+        🚀 시작하기
+      </a>
+      <button onclick="closeModal('personalModal')" style="background: none; border: none; color: var(--text-light); cursor: pointer; padding: 8px 16px;">
+        닫기
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Modal functions
+    function openModal(modalId) {
+      document.getElementById(modalId).style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+      document.body.style.overflow = 'auto';
+    }
+
+    // Card click handlers
+    document.getElementById('classroomCard').addEventListener('click', function(e) {
+      e.preventDefault();
+      openModal('classroomModal');
+    });
+
+    document.getElementById('personalCard').addEventListener('click', function(e) {
+      e.preventDefault();
+      openModal('personalModal');
+    });
+
+    // Close modal on backdrop click
+    document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+      modal.addEventListener('click', function(e) {
+        if (e.target === this) {
+          closeModal(this.id);
+        }
+      });
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        document.querySelectorAll('[id$="Modal"]').forEach(modal => {
+          modal.style.display = 'none';
+        });
+        document.body.style.overflow = 'auto';
+      }
+    });
+  </script>
+</body>
+</html>
