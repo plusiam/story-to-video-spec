@@ -4,126 +4,63 @@
 
 ---
 
-## 🚨 최종 합의 사항 (2026-01-17)
+## 서비스 소개
 
-> **⚠️ 다음 개발 시 반드시 이 섹션 먼저 확인!**
+**하나의 서비스, 두 가지 모드**
 
-### 핵심 결정: 두 시스템 완전 분리
-
-| 항목 | 학급 모드 | 개인 모드 |
-|------|----------|----------|
-| **폴더** | `classroom-gas/` | `personal-app/` |
-| **기술** | GAS + Spreadsheet | React + Supabase + Vercel |
-| **구조** | **점조직 (분산)** | **중앙 집중식** |
-| **대상** | 교사 + 학급 학생 | 계정 기반 개인 사용자 |
-| **인증** | PIN + QR코드 | Google/이메일 로그인 |
-| **데이터** | 교사 본인 드라이브 | Supabase |
-| **AI 기능** | 없음 | 예정 |
-
-### 아키텍처
+| 모드 | 대상 | 특징 |
+|------|------|------|
+| 🏫 **학급 모드** | 교사 + 학급 학생 | 교사별 독립 운영, AI 지원 배포 |
+| 🎨 **개인 모드** | 개인 사용자 | 계정 기반, AI 기능 예정 |
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                    📱 통합 랜딩 페이지                        │
-│                    (landing/)                                │
-│           학급 모드 / 개인 모드 선택 진입점                   │
-└─────────────────────────┬────────────────────────────────────┘
+          ┌─────────────────────────────────┐
+          │      📱 통합 랜딩 페이지        │
+          │     story-worksheet.github.io   │
+          └───────────────┬─────────────────┘
                           │
           ┌───────────────┴───────────────┐
           │                               │
           ▼                               ▼
-┌─────────────────────┐      ┌────────────────────────────────┐
-│   👩‍🏫 학급 모드      │      │   🎨 개인 모드                  │
-│  classroom-gas/     │      │  personal-app/                 │
-├─────────────────────┤      ├────────────────────────────────┤
-│ • 점조직 구조       │      │ • 중앙 집중식                  │
-│ • 교사별 독립 운영  │      │ • 관리자 승인 시스템           │
-│ • GAS + 시트       │      │ • React + Supabase             │
-└─────────────────────┘      └────────────────────────────────┘
-```
-
-### 점조직 모델 (학급 모드만 해당)
-
-```
-📦 원본 템플릿 (classroom-gas/)
-          │
-          │ "사본 만들기"
-          ├─────────────────────────────────────┐
-          │                                     │
-          ▼                                     ▼
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│ 김쌤 시스템     │  │ 박쌤 시스템     │  │ 이쌤 시스템     │
-│ (완전 독립)    │  │ (완전 독립)    │  │ (완전 독립)    │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-```
-
-- 각 교사가 템플릿을 복사하여 **자신만의 독립 시스템** 운영
-- 데이터는 **교사 본인 드라이브**에만 저장
-- 중앙 서버 의존 없음 → **동시접속 제한 문제 해결**
-
-### 개인 모드 승인 시스템
-
-```
-MVP 단계 (현재):
-  가입 → 자동 승인 (VITE_AUTO_APPROVE_USERS=true)
-
-Production 단계 (나중):
-  가입 신청 → pending → 관리자 승인 → approved
-
-※ 승인 구조는 이미 설계 완료 (환경변수만 변경)
-```
-
-**사용자 상태 (Supabase users.status)**
-| 상태 | 설명 |
-|------|------|
-| `pending` | 승인 대기 |
-| `approved` | 승인됨 (사용 가능) |
-| `rejected` | 거절됨 |
-| `suspended` | 정지됨 |
-
----
-
-## 📁 폴더 구조
-
-```
-story-creator/
-│
-├── README.md                 # 이 파일 (최종 합의 + 개요)
-├── HISTORY.md               # 개발 히스토리 (과거 논의)
-│
-├── landing/                  # 통합 랜딩 페이지 (GitHub Pages)
-│   └── index.html
-│
-├── classroom-gas/            # 학급 모드 ─ GAS 기반
-│   ├── Code.gs              # 메인 진입점
-│   ├── Auth.gs              # 인증 (PIN, 교사)
-│   ├── Student.gs           # 학생 관리
-│   ├── Work.gs              # 작품 CRUD
-│   ├── Settings.gs          # 설정
-│   ├── Utils.gs             # 유틸리티
-│   ├── *.html               # 각종 페이지
-│   └── README.md            # 학급 모드 문서
-│
-├── personal-app/             # 개인 모드 ─ React 기반
-│   ├── src/
-│   │   ├── App.tsx          # 라우터
-│   │   ├── pages/           # 페이지 컴포넌트
-│   │   ├── hooks/           # useAuth, useWorks
-│   │   ├── lib/             # supabase, config
-│   │   └── types/           # TypeScript 타입
-│   ├── supabase/
-│   │   └── migrations/      # 001_initial.sql
-│   └── README.md            # 개인 모드 문서
-│
-└── docs/                     # 기획 문서 아카이브
-    └── auth-system-v2/      # 인증 시스템 기획 (히스토리)
+    ┌───────────┐                  ┌───────────┐
+    │ 🏫 학급   │                  │ 🎨 개인   │
+    │  모드     │                  │  모드     │
+    └───────────┘                  └───────────┘
+    별도 저장소                    이 저장소
 ```
 
 ---
 
-## 🚀 빠른 시작
+## 저장소 구조
+
+이 프로젝트는 **두 개의 GitHub 저장소**로 운영됩니다:
+
+### 📦 story-worksheet (이 저장소)
+
+```
+story-worksheet/
+├── landing/              # 통합 랜딩 페이지 (GitHub Pages)
+├── personal-app/         # 개인 모드 (React + Supabase)
+├── docs/                 # 기획 문서 아카이브
+├── README.md             # 이 파일
+├── HISTORY.md            # 개발 히스토리
+└── DEVELOPMENT_STRATEGY.md  # 개발 전략
+```
+
+### 📦 [story-worksheet-classroom](https://github.com/plusiam/story-worksheet-classroom)
+
+학급 모드 전용 저장소 (GAS 코드)
+
+- 교사가 AI에게 저장소 보여주고 설치 요청 가능
+- 자세한 내용은 해당 저장소 참조
+
+---
+
+## 빠른 시작
 
 ### 학급 모드
+
+**[story-worksheet-classroom 저장소](https://github.com/plusiam/story-worksheet-classroom)** 참조
 
 ```
 1. 템플릿 스프레드시트 접속
@@ -131,6 +68,8 @@ story-creator/
 3. 확장 프로그램 > Apps Script > 배포 > 새 배포
 4. 웹앱 URL 접속 → 초기 설정 마법사 완료
 ```
+
+💡 **AI 도움받기**: 저장소의 `SETUP-WITH-AI.md` 가이드 참조
 
 ### 개인 모드
 
@@ -143,28 +82,51 @@ npm run dev
 
 ---
 
-## 📋 개발 현황
+## 기술 스택
+
+| 모드 | 기술 |
+|------|------|
+| 학급 모드 | Google Apps Script + Spreadsheet |
+| 개인 모드 | React + TypeScript + Supabase + Vercel |
+| 랜딩 페이지 | HTML + CSS (GitHub Pages) |
+
+---
+
+## 개발 현황
 
 | 상태 | 항목 |
 |:----:|------|
-| ✅ | 학급 모드 MVP (GAS) |
+| ✅ | 학급 모드 MVP |
 | ✅ | 개인 모드 프로젝트 구조 |
 | ✅ | 개인 모드 Supabase 스키마 |
 | ✅ | 통합 랜딩 페이지 |
+| ✅ | 저장소 분리 |
 | ⬜ | 개인 모드 MVP 구현 |
 | ⬜ | AI 이미지 생성 (개인 모드) |
 | ⬜ | 그림책 내보내기 |
 
 ---
 
-## 🔗 관련 문서
+## 문서
 
-- **[HISTORY.md](./HISTORY.md)** - 개발 히스토리 (과거 논의 내용)
-- **[classroom-gas/README.md](./classroom-gas/README.md)** - 학급 모드 상세
-- **[personal-app/README.md](./personal-app/README.md)** - 개인 모드 상세
-- **[docs/auth-system-v2/](./docs/auth-system-v2/)** - 기획 문서 아카이브
+| 문서 | 내용 |
+|------|------|
+| [HISTORY.md](./HISTORY.md) | 개발 히스토리 (과거 논의) |
+| [DEVELOPMENT_STRATEGY.md](./DEVELOPMENT_STRATEGY.md) | 저장소 분리 전략 |
+| [personal-app/README.md](./personal-app/README.md) | 개인 모드 상세 |
+| [docs/](./docs/) | 기획 문서 아카이브 |
 
 ---
 
-**버전**: 2.0.0
+## 기여하기
+
+### 개인 모드 관련
+이 저장소에 이슈/PR 등록
+
+### 학급 모드 관련
+[story-worksheet-classroom](https://github.com/plusiam/story-worksheet-classroom) 저장소에 이슈/PR 등록
+
+---
+
+**버전**: 3.0.0
 **최종 수정**: 2026-01-17
