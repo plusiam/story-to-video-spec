@@ -1,6 +1,22 @@
 import { useState } from 'react';
 import { Plus, ChevronDown, ChevronRight } from 'lucide-react';
-import SceneEditor from './SceneEditor';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  arrayMove
+} from '@dnd-kit/sortable';
+import SortableSceneItem from './SortableSceneItem';
 import {
   type Scene,
   createEmptyScene,
@@ -29,6 +45,42 @@ export default function PanelSceneExpander({
   const colors = PANEL_COLORS[panelKey];
   const labels = PANEL_LABELS[panelKey];
 
+  // 드래그 앤 드롭 센서 설정
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px 이동 후 드래그 시작
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 150, // 모바일: 150ms 길게 누르기
+        tolerance: 5,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // 드래그 완료 핸들러
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = scenes.findIndex((s) => s.id === active.id);
+      const newIndex = scenes.findIndex((s) => s.id === over.id);
+
+      const reordered = arrayMove(scenes, oldIndex, newIndex);
+      // order 필드 업데이트
+      reordered.forEach((scene, idx) => {
+        scene.order = idx + 1;
+      });
+
+      onChange(reordered);
+    }
+  };
+
   // 장면 추가
   const handleAddScene = () => {
     const newScene = createEmptyScene(panelKey, scenes.length + 1);
@@ -56,28 +108,6 @@ export default function PanelSceneExpander({
       });
       onChange(newScenes);
     }
-  };
-
-  // 장면 위로 이동
-  const handleMoveUp = (index: number) => {
-    if (index === 0) return;
-    const newScenes = [...scenes];
-    [newScenes[index - 1], newScenes[index]] = [newScenes[index], newScenes[index - 1]];
-    newScenes.forEach((scene, i) => {
-      scene.order = i + 1;
-    });
-    onChange(newScenes);
-  };
-
-  // 장면 아래로 이동
-  const handleMoveDown = (index: number) => {
-    if (index === scenes.length - 1) return;
-    const newScenes = [...scenes];
-    [newScenes[index], newScenes[index + 1]] = [newScenes[index + 1], newScenes[index]];
-    newScenes.forEach((scene, i) => {
-      scene.order = i + 1;
-    });
-    onChange(newScenes);
   };
 
   // 완성된 장면 수
@@ -143,32 +173,41 @@ export default function PanelSceneExpander({
               </button>
             </div>
           ) : (
-            <>
-              {scenes.map((scene, index) => (
-                <SceneEditor
-                  key={scene.id}
-                  scene={scene}
-                  sceneNumber={index + 1}
-                  totalScenes={scenes.length}
-                  panelKey={panelKey}
-                  onChange={(updated) => handleSceneChange(index, updated)}
-                  onDelete={() => handleDeleteScene(index)}
-                  onMoveUp={() => handleMoveUp(index)}
-                  onMoveDown={() => handleMoveDown(index)}
-                />
-              ))}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={scenes.map(s => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-3 sm:space-y-4">
+                  {scenes.map((scene, index) => (
+                    <SortableSceneItem
+                      key={scene.id}
+                      scene={scene}
+                      sceneNumber={index + 1}
+                      totalScenes={scenes.length}
+                      panelKey={panelKey}
+                      onChange={(updated) => handleSceneChange(index, updated)}
+                      onDelete={() => handleDeleteScene(index)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
 
               {/* 장면 추가 버튼 */}
               {scenes.length < 3 && (
                 <button
                   onClick={handleAddScene}
-                  className={`w-full py-2.5 sm:py-3 border-2 border-dashed ${colors.border} rounded-xl text-gray-500 hover:${colors.bg} hover:${colors.text} transition-colors flex items-center justify-center gap-2 text-sm sm:text-base`}
+                  className={`w-full py-2.5 sm:py-3 border-2 border-dashed ${colors.border} rounded-xl text-gray-500 hover:${colors.bg} hover:${colors.text} transition-colors flex items-center justify-center gap-2 text-sm sm:text-base mt-3 sm:mt-4`}
                 >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   장면 추가 (최대 3개)
                 </button>
               )}
-            </>
+            </DndContext>
           )}
         </div>
       )}

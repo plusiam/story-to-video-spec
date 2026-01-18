@@ -17,6 +17,7 @@ interface SceneEditorProps {
   onDelete: () => void;
   onMoveUp: () => void;
   onMoveDown: () => void;
+  hideMoveButtons?: boolean;
 }
 
 /**
@@ -30,7 +31,8 @@ export default function SceneEditor({
   onChange,
   onDelete,
   onMoveUp,
-  onMoveDown
+  onMoveDown,
+  hideMoveButtons = false
 }: SceneEditorProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showPrompt, setShowPrompt] = useState(false);
@@ -78,25 +80,27 @@ export default function SceneEditor({
         </div>
 
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-          {/* 순서 변경 버튼 - 모바일에서 숨김 */}
-          <div className="hidden sm:flex flex-col">
-            <button
-              onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
-              disabled={sceneNumber === 1}
-              className="p-1 hover:bg-white/50 rounded disabled:opacity-30"
-              title="위로 이동"
-            >
-              <ChevronUp className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
-              disabled={sceneNumber === totalScenes}
-              className="p-1 hover:bg-white/50 rounded disabled:opacity-30"
-              title="아래로 이동"
-            >
-              <ChevronDown className="w-4 h-4" />
-            </button>
-          </div>
+          {/* 순서 변경 버튼 - hideMoveButtons가 true면 숨김 (드래그로 대체) */}
+          {!hideMoveButtons && (
+            <div className="hidden sm:flex flex-col">
+              <button
+                onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+                disabled={sceneNumber === 1}
+                className="p-1 hover:bg-white/50 rounded disabled:opacity-30"
+                title="위로 이동"
+              >
+                <ChevronUp className="w-4 h-4" />
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+                disabled={sceneNumber === totalScenes}
+                className="p-1 hover:bg-white/50 rounded disabled:opacity-30"
+                title="아래로 이동"
+              >
+                <ChevronDown className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* 삭제 버튼 */}
           <button
