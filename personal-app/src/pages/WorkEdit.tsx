@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorks } from '@/hooks/useWorks';
-import { ArrowLeft, Save, Trash2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson } from 'lucide-react';
 import type { Work } from '@/types';
 import { CONFIG } from '@/lib/config';
 import { FourPanelStory, EMPTY_PANELS, type PanelContent } from '@/components/story';
@@ -103,6 +103,74 @@ export default function WorkEditPage() {
     }
   };
 
+  // 텍스트 파일로 다운로드
+  const handleDownloadText = () => {
+    const content = `제목: ${title}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[기 - 시작]
+${panels.ki || '(작성되지 않음)'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[승 - 전개]
+${panels.seung || '(작성되지 않음)'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[전 - 위기]
+${panels.jeon || '(작성되지 않음)'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+[결 - 결말]
+${panels.gyeol || '(작성되지 않음)'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+작성일: ${new Date().toLocaleDateString('ko-KR')}
+`;
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || '스토리'}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // JSON 파일로 다운로드
+  const handleDownloadJson = () => {
+    const data = {
+      title,
+      panels: {
+        ki: { label: '기(시작)', content: panels.ki },
+        seung: { label: '승(전개)', content: panels.seung },
+        jeon: { label: '전(위기)', content: panels.jeon },
+        gyeol: { label: '결(결말)', content: panels.gyeol }
+      },
+      metadata: {
+        createdAt: work?.created_at,
+        updatedAt: work?.updated_at,
+        exportedAt: new Date().toISOString()
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || '스토리'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!work) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -187,6 +255,32 @@ export default function WorkEditPage() {
             </button>
           </div>
         )}
+
+        {/* 다운로드 버튼 */}
+        <div className="card mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-medium text-gray-700 flex items-center gap-2">
+              <Download className="w-5 h-5" />
+              내보내기
+            </h3>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={handleDownloadText}
+              className="flex-1 btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+            >
+              <FileText className="w-5 h-5" />
+              텍스트 파일 (.txt)
+            </button>
+            <button
+              onClick={handleDownloadJson}
+              className="flex-1 btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+            >
+              <FileJson className="w-5 h-5" />
+              JSON 파일 (.json)
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   );
