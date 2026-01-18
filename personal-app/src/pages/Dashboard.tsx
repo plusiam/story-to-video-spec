@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useWorks } from '@/hooks/useWorks';
 import { Plus, BookOpen, LogOut, Sparkles } from 'lucide-react';
 

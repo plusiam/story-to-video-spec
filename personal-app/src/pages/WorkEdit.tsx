@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useWorks } from '@/hooks/useWorks';
 import { ArrowLeft, Save, Trash2, Wand2 } from 'lucide-react';
 import type { Work } from '@/types';
