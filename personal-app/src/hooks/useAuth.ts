@@ -18,9 +18,11 @@ export function useAuth() {
   // 인증 상태 변경 리스너
   useEffect(() => {
     let isMounted = true;
+    console.log('[useAuth] 🔄 Effect initialized');
 
     // 사용자 프로필 조회 (내부 함수)
     const getProfile = async (userId: string) => {
+      console.log('[useAuth] 📊 Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -28,14 +30,16 @@ export function useAuth() {
         .single();
 
       if (error) {
-        console.error('Failed to fetch user profile:', error);
+        console.error('[useAuth] ❌ Failed to fetch user profile:', error);
         return null;
       }
+      console.log('[useAuth] ✅ Profile fetched successfully:', data);
       return data as User;
     };
 
     // 사용자 프로필 생성 (내부 함수)
     const createProfile = async (userId: string, email: string, provider: string) => {
+      console.log('[useAuth] 🆕 Creating new profile:', { userId, email, provider });
       const { data, error } = await supabase
         .from('users')
         .insert({
@@ -50,30 +54,42 @@ export function useAuth() {
         .single();
 
       if (error) {
-        console.error('Failed to create user profile:', error);
+        console.error('[useAuth] ❌ Failed to create user profile:', error);
         return null;
       }
+      console.log('[useAuth] ✅ Profile created successfully:', data);
       return data as User;
     };
 
     // 현재 세션 확인
     const initializeAuth = async () => {
+      console.log('[useAuth] 🚀 Starting auth initialization');
+
       try {
+        console.log('[useAuth] 🔍 Getting current session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('Session error:', sessionError);
+          console.error('[useAuth] ⚠️ Session error:', sessionError);
         }
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          console.log('[useAuth] ⏹️ Component unmounted, aborting initialization');
+          return;
+        }
 
         if (session?.user) {
+          console.log('[useAuth] 👤 Session found for user:', session.user.email);
           let profile = await getProfile(session.user.id);
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            console.log('[useAuth] ⏹️ Component unmounted after getProfile');
+            return;
+          }
 
           // 프로필이 없으면 생성
           if (!profile) {
+            console.log('[useAuth] 📝 Profile not found, creating new profile');
             profile = await createProfile(
               session.user.id,
               session.user.email || '',
@@ -81,9 +97,16 @@ export function useAuth() {
             );
           }
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            console.log('[useAuth] ⏹️ Component unmounted after createProfile');
+            return;
+          }
 
-          console.log('Auth state set:', { profile, isApproved: profile?.status === 'approved', isAdmin: profile?.role === 'admin' });
+          console.log('[useAuth] ✅ Setting authenticated state:', {
+            profile,
+            isApproved: profile?.status === 'approved',
+            isAdmin: profile?.role === 'admin'
+          });
 
           setState({
             user: profile,
@@ -93,7 +116,7 @@ export function useAuth() {
             isAdmin: profile?.role === 'admin',
           });
         } else {
-          console.log('No session found');
+          console.log('[useAuth] 🚫 No session found, setting unauthenticated state');
           setState({
             user: null,
             isLoading: false,
@@ -105,15 +128,16 @@ export function useAuth() {
       } catch (error) {
         // AbortError는 무시 (React StrictMode에서 발생)
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('AbortError ignored - retrying');
-          // 재시도
+          console.log('[useAuth] 🔄 AbortError detected - silently retrying in 100ms (no state change)');
+          // 재시도 - 상태 변경 없이
           if (isMounted) {
             setTimeout(() => initializeAuth(), 100);
           }
-          return;
+          return; // AbortError는 상태 변경하지 않고 종료
         }
 
-        console.error('Auth initialization error:', error);
+        // 실제 오류인 경우에만 상태 초기화
+        console.error('[useAuth] ❌ Auth initialization error (non-AbortError):', error);
         if (isMounted) {
           setState({
             user: null,
@@ -131,14 +155,24 @@ export function useAuth() {
     // 인증 상태 변경 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (!isMounted) return;
+        console.log('[useAuth] 🔔 Auth state change event:', event, 'Session:', session?.user?.email || 'none');
+
+        if (!isMounted) {
+          console.log('[useAuth] ⏹️ Component unmounted, ignoring auth state change');
+          return;
+        }
 
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('[useAuth] 🔐 SIGNED_IN event - processing...');
           let profile = await getProfile(session.user.id);
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            console.log('[useAuth] ⏹️ Component unmounted after getProfile in SIGNED_IN');
+            return;
+          }
 
           if (!profile) {
+            console.log('[useAuth] 📝 Creating new profile for signed-in user');
             profile = await createProfile(
               session.user.id,
               session.user.email || '',
@@ -146,14 +180,19 @@ export function useAuth() {
             );
           }
 
-          if (!isMounted) return;
+          if (!isMounted) {
+            console.log('[useAuth] ⏹️ Component unmounted after createProfile in SIGNED_IN');
+            return;
+          }
 
           // 마지막 로그인 시간 업데이트
+          console.log('[useAuth] 🕐 Updating last login time');
           await supabase
             .from('users')
             .update({ last_login_at: new Date().toISOString() })
             .eq('id', session.user.id);
 
+          console.log('[useAuth] ✅ Setting authenticated state from SIGNED_IN event');
           setState({
             user: profile,
             isLoading: false,
@@ -162,6 +201,7 @@ export function useAuth() {
             isAdmin: profile?.role === 'admin',
           });
         } else if (event === 'SIGNED_OUT') {
+          console.log('[useAuth] 🚪 SIGNED_OUT event - clearing auth state');
           setState({
             user: null,
             isLoading: false,
@@ -169,11 +209,14 @@ export function useAuth() {
             isApproved: false,
             isAdmin: false,
           });
+        } else {
+          console.log('[useAuth] ℹ️ Other auth event:', event, '- no action taken');
         }
       }
     );
 
     return () => {
+      console.log('[useAuth] 🧹 Cleanup: unmounting and unsubscribing');
       isMounted = false;
       subscription.unsubscribe();
     };
