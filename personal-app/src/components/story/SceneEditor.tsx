@@ -55,31 +55,31 @@ export default function SceneEditor({
     <div className={`border-2 ${colors.border} rounded-xl overflow-hidden transition-all ${isExpanded ? 'shadow-md' : ''}`}>
       {/* 헤더 */}
       <div
-        className={`${colors.light} px-4 py-3 flex items-center justify-between cursor-pointer`}
+        className={`${colors.light} px-3 sm:px-4 py-3 flex items-center justify-between cursor-pointer`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <div className="flex items-center gap-3">
-          <span className={`w-8 h-8 ${colors.accent} rounded-full flex items-center justify-center text-white font-bold text-sm`}>
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <span className={`w-7 h-7 sm:w-8 sm:h-8 ${colors.accent} rounded-full flex items-center justify-center text-white font-bold text-xs sm:text-sm flex-shrink-0`}>
             {sceneNumber}
           </span>
-          <div>
-            <span className={`font-medium ${colors.text}`}>
+          <div className="min-w-0 flex-1">
+            <span className={`font-medium ${colors.text} text-sm sm:text-base`}>
               장면 {sceneNumber}
             </span>
             {!isExpanded && !isEmpty && (
-              <p className="text-sm text-gray-500 truncate max-w-[200px]">
+              <p className="text-xs sm:text-sm text-gray-500 truncate">
                 {scene.action || scene.setting || '내용 없음'}
               </p>
             )}
           </div>
           {isComplete && (
-            <span className="text-green-500 text-sm">✓ 완성</span>
+            <span className="text-green-500 text-xs sm:text-sm flex-shrink-0 hidden xs:inline">✓ 완성</span>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* 순서 변경 버튼 */}
-          <div className="flex flex-col">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* 순서 변경 버튼 - 모바일에서 숨김 */}
+          <div className="hidden sm:flex flex-col">
             <button
               onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
               disabled={sceneNumber === 1}
@@ -101,7 +101,7 @@ export default function SceneEditor({
           {/* 삭제 버튼 */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="p-2 hover:bg-red-100 rounded-lg text-red-500"
+            className="p-1.5 sm:p-2 hover:bg-red-100 rounded-lg text-red-500"
             title="장면 삭제"
           >
             <Trash2 className="w-4 h-4" />
@@ -114,14 +114,14 @@ export default function SceneEditor({
 
       {/* 내용 */}
       {isExpanded && (
-        <div className="p-4 space-y-4 bg-white">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 bg-white">
           {SCENE_FIELDS.map((field) => (
             <div key={field.key}>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-1">
+              <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1">
                 <span>{field.icon}</span>
                 {field.label}
                 {['setting', 'characters', 'action'].includes(field.key) && (
-                  <span className="text-red-400 text-xs">*필수</span>
+                  <span className="text-red-400 text-xs">*</span>
                 )}
               </label>
               {field.multiline ? (
@@ -129,8 +129,8 @@ export default function SceneEditor({
                   value={scene[field.key]}
                   onChange={(e) => handleFieldChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
-                  className={`w-full p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} resize-none`}
-                  rows={3}
+                  className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} resize-none text-sm sm:text-base`}
+                  rows={2}
                 />
               ) : (
                 <input
@@ -138,25 +138,25 @@ export default function SceneEditor({
                   value={scene[field.key]}
                   onChange={(e) => handleFieldChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
-                  className={`w-full p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border}`}
+                  className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} text-sm sm:text-base`}
                 />
               )}
-              <p className="text-xs text-gray-400 mt-1">{field.hint}</p>
+              <p className="text-xs text-gray-400 mt-1 hidden sm:block">{field.hint}</p>
             </div>
           ))}
 
           {/* AI 프롬프트 미리보기 */}
-          <div className="pt-4 border-t border-gray-100">
+          <div className="pt-3 sm:pt-4 border-t border-gray-100">
             <button
               onClick={() => setShowPrompt(!showPrompt)}
-              className={`flex items-center gap-2 text-sm ${colors.text} hover:underline`}
+              className={`flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm ${colors.text} hover:underline`}
             >
-              <Sparkles className="w-4 h-4" />
-              {showPrompt ? 'AI 프롬프트 숨기기' : 'AI 이미지 프롬프트 미리보기'}
+              <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              {showPrompt ? 'AI 프롬프트 숨기기' : 'AI 프롬프트 보기'}
             </button>
 
             {showPrompt && scene.imagePrompt && (
-              <div className={`mt-2 p-3 ${colors.bg} rounded-lg text-sm text-gray-600 font-mono`}>
+              <div className={`mt-2 p-2 sm:p-3 ${colors.bg} rounded-lg text-xs sm:text-sm text-gray-600 font-mono break-words`}>
                 {scene.imagePrompt}
               </div>
             )}

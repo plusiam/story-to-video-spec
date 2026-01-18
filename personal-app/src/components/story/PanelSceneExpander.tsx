@@ -86,22 +86,22 @@ export default function PanelSceneExpander({
   ).length;
 
   return (
-    <div className={`border-2 ${colors.border} rounded-2xl overflow-hidden`}>
+    <div className={`border-2 ${colors.border} rounded-xl sm:rounded-2xl overflow-hidden`}>
       {/* 패널 헤더 */}
       <div
-        className={`${colors.bg} px-4 py-4 cursor-pointer`}
+        className={`${colors.bg} px-3 sm:px-4 py-3 sm:py-4 cursor-pointer`}
         onClick={() => setIsExpanded(!isExpanded)}
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`w-10 h-10 ${colors.accent} rounded-full flex items-center justify-center text-white font-bold`}>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className={`w-8 h-8 sm:w-10 sm:h-10 ${colors.accent} rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-base`}>
               {labels.number}
             </span>
             <div>
-              <h3 className={`font-bold ${colors.text} text-lg`}>
+              <h3 className={`font-bold ${colors.text} text-base sm:text-lg`}>
                 {labels.label} ({labels.subtitle})
               </h3>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500">
                 {scenes.length}개 장면 · {completedScenes}개 완성
               </p>
             </div>
@@ -109,34 +109,34 @@ export default function PanelSceneExpander({
 
           <div className="flex items-center gap-2">
             {completedScenes === scenes.length && scenes.length > 0 && (
-              <span className="text-green-500 text-sm font-medium">✓ 완료</span>
+              <span className="text-green-500 text-xs sm:text-sm font-medium hidden sm:inline">✓ 완료</span>
             )}
             {isExpanded ? (
-              <ChevronDown className={`w-6 h-6 ${colors.text}`} />
+              <ChevronDown className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
             ) : (
-              <ChevronRight className={`w-6 h-6 ${colors.text}`} />
+              <ChevronRight className={`w-5 h-5 sm:w-6 sm:h-6 ${colors.text}`} />
             )}
           </div>
         </div>
 
         {/* 원본 4컷 내용 미리보기 */}
         {originalContent && (
-          <div className={`mt-3 p-3 bg-white/60 rounded-lg`}>
+          <div className={`mt-2 sm:mt-3 p-2 sm:p-3 bg-white/60 rounded-lg`}>
             <p className="text-xs text-gray-500 mb-1">📝 원본 4컷 내용:</p>
-            <p className="text-sm text-gray-700 line-clamp-2">{originalContent}</p>
+            <p className="text-xs sm:text-sm text-gray-700 line-clamp-2">{originalContent}</p>
           </div>
         )}
       </div>
 
       {/* 장면 목록 */}
       {isExpanded && (
-        <div className="p-4 space-y-4 bg-gray-50">
+        <div className="p-3 sm:p-4 space-y-3 sm:space-y-4 bg-gray-50">
           {scenes.length === 0 ? (
-            <div className="text-center py-8">
-              <p className="text-gray-500 mb-4">아직 장면이 없습니다.</p>
+            <div className="text-center py-6 sm:py-8">
+              <p className="text-gray-500 mb-4 text-sm sm:text-base">아직 장면이 없습니다.</p>
               <button
                 onClick={handleAddScene}
-                className={`inline-flex items-center gap-2 px-4 py-2 ${colors.accent} text-white rounded-lg hover:opacity-90`}
+                className={`inline-flex items-center gap-2 px-3 sm:px-4 py-2 ${colors.accent} text-white rounded-lg hover:opacity-90 text-sm sm:text-base`}
               >
                 <Plus className="w-4 h-4" />
                 첫 번째 장면 추가
@@ -162,9 +162,9 @@ export default function PanelSceneExpander({
               {scenes.length < 3 && (
                 <button
                   onClick={handleAddScene}
-                  className={`w-full py-3 border-2 border-dashed ${colors.border} rounded-xl text-gray-500 hover:${colors.bg} hover:${colors.text} transition-colors flex items-center justify-center gap-2`}
+                  className={`w-full py-2.5 sm:py-3 border-2 border-dashed ${colors.border} rounded-xl text-gray-500 hover:${colors.bg} hover:${colors.text} transition-colors flex items-center justify-center gap-2 text-sm sm:text-base`}
                 >
-                  <Plus className="w-5 h-5" />
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                   장면 추가 (최대 3개)
                 </button>
               )}
