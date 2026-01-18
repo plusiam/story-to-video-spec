@@ -59,7 +59,11 @@ export function useAuth() {
     // 현재 세션 확인
     const initializeAuth = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+        }
 
         if (!isMounted) return;
 
@@ -79,6 +83,8 @@ export function useAuth() {
 
           if (!isMounted) return;
 
+          console.log('Auth state set:', { profile, isApproved: profile?.status === 'approved', isAdmin: profile?.role === 'admin' });
+
           setState({
             user: profile,
             isLoading: false,
@@ -87,6 +93,7 @@ export function useAuth() {
             isAdmin: profile?.role === 'admin',
           });
         } else {
+          console.log('No session found');
           setState({
             user: null,
             isLoading: false,
@@ -96,6 +103,16 @@ export function useAuth() {
           });
         }
       } catch (error) {
+        // AbortError는 무시 (React StrictMode에서 발생)
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('AbortError ignored - retrying');
+          // 재시도
+          if (isMounted) {
+            setTimeout(() => initializeAuth(), 100);
+          }
+          return;
+        }
+
         console.error('Auth initialization error:', error);
         if (isMounted) {
           setState({
