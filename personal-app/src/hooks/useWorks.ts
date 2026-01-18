@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Work, WorkData } from '@/types';
+import type { Work, WorkData, Database } from '@/types';
 
 /**
  * 작품 관리 훅
@@ -72,17 +72,19 @@ export function useWorks(userId: string | undefined) {
   }, [userId]);
 
   // 작품 업데이트
-  const updateWork = useCallback(async (workId: string, updates: Partial<Work>) => {
+  const updateWork = useCallback(async (workId: string, updates: Partial<Omit<Work, 'id' | 'user_id' | 'created_at'>>) => {
     setIsLoading(true);
     setError(null);
 
     try {
+      const updateData: Database['public']['Tables']['works']['Update'] = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
       const { data, error: updateError } = await supabase
         .from('works')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', workId)
         .select()
         .single();
