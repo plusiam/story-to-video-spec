@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from '@/hooks/useAuth';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 
 // Pages
 import HomePage from '@/pages/Home';
@@ -56,10 +56,9 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
 /**
  * 앱 라우터
  */
-function App() {
+function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Routes>
+    <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -98,6 +97,15 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
