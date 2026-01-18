@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorks } from '@/hooks/useWorks';
+import { useAIUsage, useVisualDNA } from '@/hooks/useAIUsage';
 import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson } from 'lucide-react';
-import type { Work } from '@/types';
+import type { Work, VisualDNA } from '@/types';
+import { createEmptyVisualDNA } from '@/types';
 import { CONFIG } from '@/lib/config';
 import {
   FourPanelStory,
@@ -12,7 +14,8 @@ import {
   Step2SceneExpansion,
   EMPTY_PANEL_SCENES,
   type PanelScenes,
-  createEmptyScene
+  createEmptyScene,
+  Step3AICompletion
 } from '@/components/story';
 
 /**
@@ -24,6 +27,20 @@ export default function WorkEditPage() {
   const { user } = useAuth();
   const { getWork, updateWork, deleteWork } = useWorks(user?.id);
 
+  // AI 사용량 및 비주얼 DNA 훅
+  const {
+    usageStatus,
+    hasApiKey,
+    saveApiKey,
+    removeApiKey
+  } = useAIUsage(user?.id);
+
+  const {
+    visualDNA,
+    saveVisualDNA,
+    isLoading: isVisualDNALoading
+  } = useVisualDNA(id);
+
   const [work, setWork] = useState<Work | null>(null);
   const [title, setTitle] = useState('');
   const [panels, setPanels] = useState<PanelContent>(EMPTY_PANELS);
@@ -32,6 +49,16 @@ export default function WorkEditPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
+  const [localVisualDNA, setLocalVisualDNA] = useState<VisualDNA | null>(null);
+
+  // 비주얼 DNA 동기화
+  useEffect(() => {
+    if (visualDNA) {
+      setLocalVisualDNA(visualDNA);
+    } else if (id && !isVisualDNALoading) {
+      setLocalVisualDNA(createEmptyVisualDNA(id));
+    }
+  }, [visualDNA, id, isVisualDNALoading]);
 
   // 작품 로드
   useEffect(() => {
@@ -366,24 +393,34 @@ ${panels.gyeol || '(작성되지 않음)'}
           </div>
         )}
 
-        {/* Step 3: 완성 (추후 구현) */}
-        {currentStep === 3 && (
+        {/* Step 3: AI 완성 */}
+        {currentStep === 3 && id && (
           <div className="card mb-6">
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎬</div>
-              <h3 className="text-xl font-bold text-gray-800 mb-2">
-                스토리 완성 단계
-              </h3>
-              <p className="text-gray-500 mb-6">
-                AI 이미지 생성 및 최종 내보내기 기능이 곧 추가됩니다!
-              </p>
-              <button
-                onClick={() => setCurrentStep(2)}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-              >
-                ← 장면 확장으로 돌아가기
-              </button>
-            </div>
+            <Step3AICompletion
+              workId={id}
+              scenes={scenes}
+              visualDNA={localVisualDNA}
+              onVisualDNAChange={(dna) => {
+                setLocalVisualDNA(dna);
+                setHasChanges(true);
+              }}
+              onVisualDNASave={async () => {
+                if (!localVisualDNA) return false;
+                setIsSaving(true);
+                const success = await saveVisualDNA(localVisualDNA);
+                setIsSaving(false);
+                if (success) {
+                  setHasChanges(false);
+                }
+                return success;
+              }}
+              usageStatus={usageStatus}
+              hasApiKey={hasApiKey}
+              onSaveApiKey={saveApiKey}
+              onRemoveApiKey={removeApiKey}
+              onBack={() => setCurrentStep(2)}
+              isSaving={isSaving}
+            />
           </div>
         )}
 

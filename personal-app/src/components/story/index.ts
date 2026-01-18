@@ -19,3 +19,9 @@ export {
   PANEL_LABELS,
   generateImagePrompt
 } from './sceneConfig';
+
+// Step 3: AI 완성
+export { default as Step3AICompletion } from './Step3AICompletion';
+export { default as VisualDNASetup } from './VisualDNASetup';
+export { default as AIUsageBanner } from './AIUsageBanner';
+export { default as ApiKeyModal } from './ApiKeyModal';
