@@ -3,7 +3,7 @@
  */
 export const CONFIG = {
   // MVP 단계: 자동 승인 (true) / 정식: 관리자 승인 (false)
-  AUTO_APPROVE_USERS: import.meta.env.VITE_AUTO_APPROVE_USERS === 'true',
+  AUTO_APPROVE_USERS: true,  // 현재 자동 승인 모드
 
   // AI 기능 활성화 여부
   ENABLE_AI_FEATURES: import.meta.env.VITE_ENABLE_AI_FEATURES === 'true',
