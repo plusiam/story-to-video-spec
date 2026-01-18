@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 // Pages
 import HomePage from '@/pages/Home';
@@ -102,11 +103,13 @@ function AppRoutes() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </BrowserRouter>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

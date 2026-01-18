@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG } from '@/lib/config';
+import { logger } from '@/lib/logger';
 import type { User, AuthState } from '@/types';
 
 interface AuthContextType extends AuthState {
@@ -24,11 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // 인증 상태 변경 리스너
   useEffect(() => {
     let isMounted = true;
-    console.log('[AuthContext] 🔄 Effect initialized');
+    logger.log('[AuthContext] 🔄 Effect initialized');
 
     // 사용자 프로필 조회 (내부 함수)
     const getProfile = async (userId: string) => {
-      console.log('[AuthContext] 📊 Fetching profile for user:', userId);
+      logger.log('[AuthContext] 📊 Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -36,16 +37,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        console.error('[AuthContext] ❌ Failed to fetch user profile:', error);
+        logger.error('[AuthContext] ❌ Failed to fetch user profile:', error);
         return null;
       }
-      console.log('[AuthContext] ✅ Profile fetched successfully:', data);
+      logger.log('[AuthContext] ✅ Profile fetched successfully:', data);
       return data as User;
     };
 
     // 사용자 프로필 생성 (내부 함수)
     const createProfile = async (userId: string, email: string, provider: string) => {
-      console.log('[AuthContext] 🆕 Creating new profile:', { userId, email, provider });
+      logger.log('[AuthContext] 🆕 Creating new profile:', { userId, email, provider });
       const { data, error } = await supabase
         .from('users')
         .insert({
@@ -60,42 +61,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        console.error('[AuthContext] ❌ Failed to create user profile:', error);
+        logger.error('[AuthContext] ❌ Failed to create user profile:', error);
         return null;
       }
-      console.log('[AuthContext] ✅ Profile created successfully:', data);
+      logger.log('[AuthContext] ✅ Profile created successfully:', data);
       return data as User;
     };
 
     // 현재 세션 확인
     const initializeAuth = async () => {
-      console.log('[AuthContext] 🚀 Starting auth initialization');
+      logger.log('[AuthContext] 🚀 Starting auth initialization');
 
       try {
-        console.log('[AuthContext] 🔍 Getting current session...');
+        logger.log('[AuthContext] 🔍 Getting current session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('[AuthContext] ⚠️ Session error:', sessionError);
+          logger.error('[AuthContext] ⚠️ Session error:', sessionError);
         }
 
         if (!isMounted) {
-          console.log('[AuthContext] ⏹️ Component unmounted, aborting initialization');
+          logger.log('[AuthContext] ⏹️ Component unmounted, aborting initialization');
           return;
         }
 
         if (session?.user) {
-          console.log('[AuthContext] 👤 Session found for user:', session.user.email);
+          logger.log('[AuthContext] 👤 Session found for user:', session.user.email);
           let profile = await getProfile(session.user.id);
 
           if (!isMounted) {
-            console.log('[AuthContext] ⏹️ Component unmounted after getProfile');
+            logger.log('[AuthContext] ⏹️ Component unmounted after getProfile');
             return;
           }
 
           // 프로필이 없으면 생성
           if (!profile) {
-            console.log('[AuthContext] 📝 Profile not found, creating new profile');
+            logger.log('[AuthContext] 📝 Profile not found, creating new profile');
             profile = await createProfile(
               session.user.id,
               session.user.email || '',
@@ -104,11 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           if (!isMounted) {
-            console.log('[AuthContext] ⏹️ Component unmounted after createProfile');
+            logger.log('[AuthContext] ⏹️ Component unmounted after createProfile');
             return;
           }
 
-          console.log('[AuthContext] ✅ Setting authenticated state:', {
+          logger.log('[AuthContext] ✅ Setting authenticated state:', {
             profile,
             isApproved: profile?.status === 'approved',
             isAdmin: profile?.role === 'admin'
@@ -122,7 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAdmin: profile?.role === 'admin',
           });
         } else {
-          console.log('[AuthContext] 🚫 No session found, setting unauthenticated state');
+          logger.log('[AuthContext] 🚫 No session found, setting unauthenticated state');
           setState({
             user: null,
             isLoading: false,
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         // AbortError는 무시 (React StrictMode에서 발생)
         if (error instanceof Error && error.name === 'AbortError') {
-          console.log('[AuthContext] 🔄 AbortError detected - silently retrying in 100ms (no state change)');
+          logger.log('[AuthContext] 🔄 AbortError detected - silently retrying in 100ms (no state change)');
           // 재시도 - 상태 변경 없이
           if (isMounted) {
             setTimeout(() => initializeAuth(), 100);
@@ -143,7 +144,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         // 실제 오류인 경우에만 상태 초기화
-        console.error('[AuthContext] ❌ Auth initialization error (non-AbortError):', error);
+        logger.error('[AuthContext] ❌ Auth initialization error (non-AbortError):', error);
         if (isMounted) {
           setState({
             user: null,
@@ -161,24 +162,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 인증 상태 변경 구독
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[AuthContext] 🔔 Auth state change event:', event, 'Session:', session?.user?.email || 'none');
+        logger.log('[AuthContext] 🔔 Auth state change event:', event, 'Session:', session?.user?.email || 'none');
 
         if (!isMounted) {
-          console.log('[AuthContext] ⏹️ Component unmounted, ignoring auth state change');
+          logger.log('[AuthContext] ⏹️ Component unmounted, ignoring auth state change');
           return;
         }
 
         if (event === 'SIGNED_IN' && session?.user) {
-          console.log('[AuthContext] 🔐 SIGNED_IN event - processing...');
+          logger.log('[AuthContext] 🔐 SIGNED_IN event - processing...');
           let profile = await getProfile(session.user.id);
 
           if (!isMounted) {
-            console.log('[AuthContext] ⏹️ Component unmounted after getProfile in SIGNED_IN');
+            logger.log('[AuthContext] ⏹️ Component unmounted after getProfile in SIGNED_IN');
             return;
           }
 
           if (!profile) {
-            console.log('[AuthContext] 📝 Creating new profile for signed-in user');
+            logger.log('[AuthContext] 📝 Creating new profile for signed-in user');
             profile = await createProfile(
               session.user.id,
               session.user.email || '',
@@ -187,18 +188,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           if (!isMounted) {
-            console.log('[AuthContext] ⏹️ Component unmounted after createProfile in SIGNED_IN');
+            logger.log('[AuthContext] ⏹️ Component unmounted after createProfile in SIGNED_IN');
             return;
           }
 
           // 마지막 로그인 시간 업데이트
-          console.log('[AuthContext] 🕐 Updating last login time');
+          logger.log('[AuthContext] 🕐 Updating last login time');
           await supabase
             .from('users')
             .update({ last_login_at: new Date().toISOString() })
             .eq('id', session.user.id);
 
-          console.log('[AuthContext] ✅ Setting authenticated state from SIGNED_IN event');
+          logger.log('[AuthContext] ✅ Setting authenticated state from SIGNED_IN event');
           setState({
             user: profile,
             isLoading: false,
@@ -207,7 +208,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAdmin: profile?.role === 'admin',
           });
         } else if (event === 'SIGNED_OUT') {
-          console.log('[AuthContext] 🚪 SIGNED_OUT event - clearing auth state');
+          logger.log('[AuthContext] 🚪 SIGNED_OUT event - clearing auth state');
           setState({
             user: null,
             isLoading: false,
@@ -216,13 +217,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAdmin: false,
           });
         } else {
-          console.log('[AuthContext] ℹ️ Other auth event:', event, '- no action taken');
+          logger.log('[AuthContext] ℹ️ Other auth event:', event, '- no action taken');
         }
       }
     );
 
     return () => {
-      console.log('[AuthContext] 🧹 Cleanup: unmounting and unsubscribing');
+      logger.log('[AuthContext] 🧹 Cleanup: unmounting and unsubscribing');
       isMounted = false;
       subscription.unsubscribe();
     };
@@ -238,7 +239,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      console.error('Google sign in error:', error);
+      logger.error('Google sign in error:', error);
       throw error;
     }
   }, []);
@@ -253,7 +254,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     if (error) {
-      console.error('Email sign in error:', error);
+      logger.error('Email sign in error:', error);
       throw error;
     }
   }, []);
@@ -262,7 +263,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Sign out error:', error);
+      logger.error('Sign out error:', error);
       throw error;
     }
   }, []);
@@ -277,7 +278,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .eq('id', state.user.id);
 
     if (error) {
-      console.error('Update nickname error:', error);
+      logger.error('Update nickname error:', error);
       throw error;
     }
 
