@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorks } from '@/hooks/useWorks';
-import { Plus, BookOpen, Settings, LogOut, Sparkles } from 'lucide-react';
+import { Plus, BookOpen, LogOut, Sparkles } from 'lucide-react';
 
 /**
  * 대시보드 (내 작품 목록)

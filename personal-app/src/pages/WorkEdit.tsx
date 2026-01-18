@@ -13,7 +13,7 @@ export default function WorkEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getWork, updateWork, deleteWork, isLoading } = useWorks(user?.id);
+  const { getWork, updateWork, deleteWork } = useWorks(user?.id);
 
   const [work, setWork] = useState<Work | null>(null);
   const [title, setTitle] = useState('');

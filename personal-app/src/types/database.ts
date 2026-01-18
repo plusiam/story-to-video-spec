@@ -55,6 +55,7 @@ export interface Database {
           created_at?: string;
           last_login_at?: string | null;
         };
+        Relationships: [];
       };
       works: {
         Row: {
@@ -93,6 +94,14 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "works_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       approval_logs: {
         Row: {
@@ -119,7 +128,33 @@ export interface Database {
           reason?: string | null;
           created_at?: string;
         };
+        Relationships: [
+          {
+            foreignKeyName: "approval_logs_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "approval_logs_admin_id_fkey";
+            columns: ["admin_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          }
+        ];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      [_ in never]: never;
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }
@@ -128,3 +163,13 @@ export interface Database {
 export type User = Database['public']['Tables']['users']['Row'];
 export type Work = Database['public']['Tables']['works']['Row'];
 export type ApprovalLog = Database['public']['Tables']['approval_logs']['Row'];
+
+// Insert types
+export type UserInsert = Database['public']['Tables']['users']['Insert'];
+export type WorkInsert = Database['public']['Tables']['works']['Insert'];
+export type ApprovalLogInsert = Database['public']['Tables']['approval_logs']['Insert'];
+
+// Update types
+export type UserUpdate = Database['public']['Tables']['users']['Update'];
+export type WorkUpdate = Database['public']['Tables']['works']['Update'];
+export type ApprovalLogUpdate = Database['public']['Tables']['approval_logs']['Update'];

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Work, WorkData, Database } from '@/types';
+import type { Work, WorkData, Database, Json } from '@/types';
 
 /**
  * 작품 관리 훅
@@ -53,8 +53,8 @@ export function useWorks(userId: string | undefined) {
           user_id: userId,
           title,
           step: 1,
-          panels: workData,
-          status: 'draft',
+          panels: workData as unknown as Json,
+          status: 'draft' as const,
         })
         .select()
         .single();

@@ -63,12 +63,14 @@ export default function AdminUsersPage() {
       if (updateError) throw updateError;
 
       // 로그 기록
-      await supabase.from('approval_logs').insert({
-        user_id: userId,
-        action: status,
-        admin_id: currentUser?.id,
-        reason: reason,
-      });
+      if (currentUser?.id) {
+        await supabase.from('approval_logs').insert({
+          user_id: userId,
+          action: status,
+          admin_id: currentUser.id,
+          reason: reason ?? null,
+        });
+      }
 
       // 목록 새로고침
       fetchUsers();
