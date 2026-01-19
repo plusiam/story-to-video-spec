@@ -1,0 +1,22 @@
+{
+  "project": {
+    "name": "story-creator",
+    "description": "초등학생을 위한 4컷 스토리 구성 학습지 - AI 프롬프트 & 문서 최적화 도구",
+    "version": "2.0"
+  },
+  "context": {
+    "primaryDocs": [
+      "docs/DEVELOPMENT_PLAN_v2.md",
+      "README.md"
+    ],
+    "excludeDocs": [
+      "docs/history/**"
+    ]
+  },
+  "rules": [
+    "이 프로젝트는 AI 이미지/영상을 직접 생성하지 않습니다",
+    "핵심 가치는 '프롬프트 최적화'와 '문서 생성'입니다",
+    "docs/history 폴더의 문서는 폐기된 계획이므로 참조하지 마세요",
+    "최신 개발 계획은 docs/DEVELOPMENT_PLAN_v2.md를 참조하세요"
+  ]
+}
