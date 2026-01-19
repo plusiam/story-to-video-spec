@@ -153,6 +153,7 @@ export default function WorkEditPage() {
     if (hasChanges && work && id) {
       handleSave();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasChanges, work, id]);
 
   // 삭제

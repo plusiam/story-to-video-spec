@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,11 +14,7 @@ export default function AdminUsersPage() {
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'suspended'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchUsers();
-  }, [filter]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       let query = supabase
@@ -39,7 +35,11 @@ export default function AdminUsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [filter]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   // 사용자 상태 변경
   const updateUserStatus = async (userId: string, status: string, reason?: string) => {
