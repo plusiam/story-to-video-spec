@@ -15,6 +15,7 @@ export {
   createEmptyScene,
   EMPTY_PANEL_SCENES,
   SCENE_FIELDS,
+  VIDS_FIELDS,
   PANEL_COLORS,
   PANEL_LABELS,
   generateImagePrompt

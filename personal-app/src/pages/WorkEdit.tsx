@@ -14,8 +14,10 @@ import {
   Step2SceneExpansion,
   EMPTY_PANEL_SCENES,
   type PanelScenes,
+  type Scene,
   createEmptyScene,
-  Step3AICompletion
+  Step3AICompletion,
+  PANEL_LABELS
 } from '@/components/story';
 
 /**
@@ -232,6 +234,169 @@ ${panels.gyeol || '(작성되지 않음)'}
     URL.revokeObjectURL(url);
   };
 
+  const collectVidsScenes = () => {
+    const panelOrder: (keyof PanelScenes)[] = ['ki', 'seung', 'jeon', 'gyeol'];
+    const items: { panelKey: keyof PanelScenes; scene: Scene }[] = [];
+
+    panelOrder.forEach((panelKey) => {
+      const ordered = [...scenes[panelKey]].sort((a, b) => (a.order || 0) - (b.order || 0));
+      ordered.forEach((scene) => {
+        const hasContent = [
+          scene.setting,
+          scene.characters,
+          scene.action,
+          scene.dialogue,
+          scene.mood,
+          scene.narration,
+          scene.subtitle,
+          scene.onScreenText
+        ].some((value) => value && value.trim());
+        if (hasContent) {
+          items.push({ panelKey, scene });
+        }
+      });
+    });
+
+    return items;
+  };
+
+  const estimateDurationSec = (scene: Scene) => {
+    if (scene.durationSec && Number.isFinite(scene.durationSec)) {
+      return scene.durationSec;
+    }
+
+    const baseText = (scene.narration || scene.subtitle || scene.dialogue || scene.action || '').trim();
+    if (!baseText) {
+      return 4;
+    }
+
+    const chars = baseText.replace(/\s+/g, '').length;
+    const sentenceCount = baseText.split(/[.!?\n]+/).filter(Boolean).length;
+    const estimate = Math.ceil(chars / 12) + (sentenceCount * 0.5);
+    const rounded = Math.round(estimate * 10) / 10;
+    return Math.max(4, rounded);
+  };
+
+  const handleDownloadVidsStoryboard = () => {
+    const items = collectVidsScenes();
+    const scenesData = items.map((item, index) => {
+      const narration = (item.scene.narration || item.scene.dialogue || item.scene.action || '').trim();
+      const subtitle = (item.scene.subtitle || narration).trim();
+
+      return {
+        sceneNumber: index + 1,
+        stage: PANEL_LABELS[item.panelKey].label,
+        stageName: PANEL_LABELS[item.panelKey].subtitle,
+        panelKey: item.panelKey,
+        narration,
+        subtitle,
+        onScreenText: item.scene.onScreenText || '',
+        durationSec: estimateDurationSec(item.scene),
+        cameraAngle: item.scene.cameraAngle || '',
+        shotType: item.scene.shotType || '',
+        sfx: item.scene.sfx || '',
+        music: item.scene.music || '',
+        setting: item.scene.setting || '',
+        characters: item.scene.characters || '',
+        action: item.scene.action || '',
+        mood: item.scene.mood || '',
+        imagePrompt: item.scene.imagePrompt || ''
+      };
+    });
+
+    const data = {
+      title,
+      exportedAt: new Date().toISOString(),
+      format: 'google-vids',
+      scenes: scenesData
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || '스토리'}-vids-storyboard.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadVidsScript = () => {
+    const items = collectVidsScenes();
+    const lines = items.map((item, index) => {
+      const narration = (item.scene.narration || item.scene.dialogue || item.scene.action || '').trim();
+      const label = `${index + 1}. [${PANEL_LABELS[item.panelKey].label}]`;
+      return `${label}\n${narration || '(나레이션 없음)'}\n`;
+    });
+
+    const content = [
+      `제목: ${title || '스토리'}`,
+      '',
+      '---',
+      '',
+      ...lines
+    ].join('\n');
+
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || '스토리'}-vids-script.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const formatSrtTime = (seconds: number) => {
+    const totalMs = Math.max(0, Math.round(seconds * 1000));
+    const ms = totalMs % 1000;
+    const totalSeconds = Math.floor(totalMs / 1000);
+    const s = totalSeconds % 60;
+    const m = Math.floor(totalSeconds / 60) % 60;
+    const h = Math.floor(totalSeconds / 3600);
+
+    const pad = (value: number, size = 2) => value.toString().padStart(size, '0');
+    return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`;
+  };
+
+  const handleDownloadVidsCaptions = () => {
+    const items = collectVidsScenes();
+    let cursor = 0;
+    const entries: string[] = [];
+
+    items.forEach((item) => {
+      const duration = estimateDurationSec(item.scene);
+      const start = cursor;
+      const end = cursor + duration;
+      cursor = end;
+
+      const text = (item.scene.subtitle || item.scene.narration || item.scene.dialogue || item.scene.action || '').trim();
+      if (!text) {
+        return;
+      }
+
+      entries.push(
+        String(entries.length + 1),
+        `${formatSrtTime(start)} --> ${formatSrtTime(end)}`,
+        text,
+        ''
+      );
+    });
+
+    const content = entries.join('\n');
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || '스토리'}-captions.srt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!work) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -432,20 +597,41 @@ ${panels.gyeol || '(작성되지 않음)'}
               내보내기
             </h3>
           </div>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={handleDownloadText}
-              className="flex-1 btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
             >
               <FileText className="w-5 h-5" />
               텍스트 파일 (.txt)
             </button>
             <button
               onClick={handleDownloadJson}
-              className="flex-1 btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
             >
               <FileJson className="w-5 h-5" />
               JSON 파일 (.json)
+            </button>
+            <button
+              onClick={handleDownloadVidsStoryboard}
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+            >
+              <FileJson className="w-5 h-5" />
+              Vids 스토리보드 (.json)
+            </button>
+            <button
+              onClick={handleDownloadVidsScript}
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50"
+            >
+              <FileText className="w-5 h-5" />
+              Vids 스크립트 (.txt)
+            </button>
+            <button
+              onClick={handleDownloadVidsCaptions}
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-gray-50 sm:col-span-2"
+            >
+              <FileText className="w-5 h-5" />
+              자막 파일 (.srt)
             </button>
           </div>
         </div>

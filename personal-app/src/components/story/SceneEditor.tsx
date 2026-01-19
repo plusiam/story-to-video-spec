@@ -4,6 +4,7 @@ import {
   type Scene,
   type SceneFieldConfig,
   SCENE_FIELDS,
+  VIDS_FIELDS,
   PANEL_COLORS,
   generateImagePrompt
 } from './sceneConfig';
@@ -36,18 +37,30 @@ export default function SceneEditor({
 }: SceneEditorProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [showVidsFields, setShowVidsFields] = useState(false);
   const colors = PANEL_COLORS[panelKey];
 
   // 필드 값 변경 핸들러
-  const handleFieldChange = (key: SceneFieldConfig['key'], value: string) => {
-    const updatedScene = { ...scene, [key]: value };
+  const handleFieldChange = (key: SceneFieldConfig['key'], value: string | number | undefined) => {
+    const updatedScene: Scene = { ...scene, [key]: value } as Scene;
     // 프롬프트 자동 업데이트
     updatedScene.imagePrompt = generateImagePrompt(updatedScene);
     onChange(updatedScene);
   };
 
   // 장면이 비어있는지 확인
-  const isEmpty = !scene.setting && !scene.characters && !scene.action && !scene.dialogue && !scene.mood;
+  const isEmpty = !scene.setting
+    && !scene.characters
+    && !scene.action
+    && !scene.dialogue
+    && !scene.mood
+    && !scene.narration
+    && !scene.subtitle
+    && !scene.onScreenText
+    && !scene.cameraAngle
+    && !scene.shotType
+    && !scene.sfx
+    && !scene.music;
 
   // 완성도 계산 (필수 필드: setting, characters, action)
   const completeness = [scene.setting, scene.characters, scene.action].filter(Boolean).length;
@@ -130,7 +143,7 @@ export default function SceneEditor({
               </label>
               {field.multiline ? (
                 <textarea
-                  value={scene[field.key]}
+                  value={(scene[field.key] as string) || ''}
                   onChange={(e) => handleFieldChange(field.key, e.target.value)}
                   placeholder={field.placeholder}
                   className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} resize-none text-sm sm:text-base`}
@@ -138,9 +151,16 @@ export default function SceneEditor({
                 />
               ) : (
                 <input
-                  type="text"
-                  value={scene[field.key]}
-                  onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                  type={field.inputType || 'text'}
+                  value={scene[field.key] === undefined ? '' : String(scene[field.key])}
+                  onChange={(e) => {
+                    if (field.inputType === 'number') {
+                      const raw = e.target.value;
+                      handleFieldChange(field.key, raw === '' ? undefined : Number(raw));
+                      return;
+                    }
+                    handleFieldChange(field.key, e.target.value);
+                  }}
                   placeholder={field.placeholder}
                   className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} text-sm sm:text-base`}
                 />
@@ -148,6 +168,54 @@ export default function SceneEditor({
               <p className="text-xs text-gray-400 mt-1 hidden sm:block">{field.hint}</p>
             </div>
           ))}
+
+          {/* Vids 필드 */}
+          <div className="pt-3 sm:pt-4 border-t border-gray-100">
+            <button
+              onClick={() => setShowVidsFields(!showVidsFields)}
+              className={`flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm ${colors.text} hover:underline`}
+            >
+              {showVidsFields ? '영상 설정 숨기기' : '영상 설정 열기'}
+            </button>
+
+            {showVidsFields && (
+              <div className="mt-3 space-y-3 sm:space-y-4">
+                {VIDS_FIELDS.map((field) => (
+                  <div key={field.key}>
+                    <label className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium text-gray-700 mb-1">
+                      <span>{field.icon}</span>
+                      {field.label}
+                    </label>
+                    {field.multiline ? (
+                      <textarea
+                        value={(scene[field.key] as string) || ''}
+                        onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} resize-none text-sm sm:text-base`}
+                        rows={2}
+                      />
+                    ) : (
+                      <input
+                        type={field.inputType || 'text'}
+                        value={scene[field.key] === undefined ? '' : String(scene[field.key])}
+                        onChange={(e) => {
+                          if (field.inputType === 'number') {
+                            const raw = e.target.value;
+                            handleFieldChange(field.key, raw === '' ? undefined : Number(raw));
+                            return;
+                          }
+                          handleFieldChange(field.key, e.target.value);
+                        }}
+                        placeholder={field.placeholder}
+                        className={`w-full p-2.5 sm:p-3 border ${colors.border} rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-1 focus:${colors.border} text-sm sm:text-base`}
+                      />
+                    )}
+                    <p className="text-xs text-gray-400 mt-1 hidden sm:block">{field.hint}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           {/* AI 프롬프트 미리보기 */}
           <div className="pt-3 sm:pt-4 border-t border-gray-100">

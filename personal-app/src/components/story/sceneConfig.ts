@@ -19,6 +19,16 @@ export interface Scene {
   dialogue: string;     // 대사
   mood: string;         // 분위기/감정
 
+  // Vids용 확장 필드
+  narration: string;    // 나레이션
+  subtitle: string;     // 자막
+  onScreenText: string; // 화면 텍스트
+  durationSec?: number; // 장면 길이(초)
+  cameraAngle: string;  // 카메라 앵글
+  shotType: string;     // 샷 타입
+  sfx: string;          // 효과음
+  music: string;        // 배경음
+
   // AI 이미지 생성용 프롬프트 (자동 생성)
   imagePrompt?: string;
 }
@@ -40,7 +50,15 @@ export const createEmptyScene = (panelKey: 'ki' | 'seung' | 'jeon' | 'gyeol', or
   characters: '',
   action: '',
   dialogue: '',
-  mood: ''
+  mood: '',
+  narration: '',
+  subtitle: '',
+  onScreenText: '',
+  durationSec: undefined,
+  cameraAngle: '',
+  shotType: '',
+  sfx: '',
+  music: ''
 });
 
 // 빈 패널 장면 컬렉션
@@ -59,6 +77,7 @@ export interface SceneFieldConfig {
   icon: string;
   hint: string;
   multiline: boolean;
+  inputType?: 'text' | 'number';
 }
 
 export const SCENE_FIELDS: SceneFieldConfig[] = [
@@ -100,6 +119,75 @@ export const SCENE_FIELDS: SceneFieldConfig[] = [
     placeholder: '예: 설렘, 긴장, 따뜻함',
     icon: '✨',
     hint: '장면의 분위기나 감정을 표현해주세요',
+    multiline: false
+  }
+];
+
+// Vids용 확장 필드
+export const VIDS_FIELDS: SceneFieldConfig[] = [
+  {
+    key: 'narration',
+    label: '나레이션',
+    placeholder: '예: 민지는 깊게 숨을 들이쉬고 작은 문을 조심스럽게 연다.',
+    icon: '🎙️',
+    hint: 'Vids 내레이터가 읽을 문장을 적어주세요',
+    multiline: true
+  },
+  {
+    key: 'subtitle',
+    label: '자막',
+    placeholder: '예: 민지는 문을 조심스럽게 열었다.',
+    icon: '📝',
+    hint: '자막으로 표시할 문장 (기본은 나레이션과 동일)',
+    multiline: true
+  },
+  {
+    key: 'onScreenText',
+    label: '화면 텍스트',
+    placeholder: '예: 첫 번째 모험의 시작',
+    icon: '🏷️',
+    hint: '화면에 크게 보여줄 키워드/타이틀',
+    multiline: false
+  },
+  {
+    key: 'durationSec',
+    label: '장면 길이(초)',
+    placeholder: '예: 6',
+    icon: '⏱️',
+    hint: '비워두면 나레이션 길이로 자동 추정',
+    multiline: false,
+    inputType: 'number'
+  },
+  {
+    key: 'cameraAngle',
+    label: '카메라 앵글',
+    placeholder: '예: wide / medium / close-up',
+    icon: '📷',
+    hint: '장면의 구도/앵글을 적어주세요',
+    multiline: false
+  },
+  {
+    key: 'shotType',
+    label: '샷 타입',
+    placeholder: '예: establish / action / reaction',
+    icon: '🎞️',
+    hint: '샷의 성격을 간단히 지정해주세요',
+    multiline: false
+  },
+  {
+    key: 'sfx',
+    label: '효과음',
+    placeholder: '예: 문이 삐걱이며 열린다',
+    icon: '🔊',
+    hint: '필요한 효과음을 적어주세요',
+    multiline: false
+  },
+  {
+    key: 'music',
+    label: '배경음',
+    placeholder: '예: 잔잔하고 따뜻한 피아노',
+    icon: '🎵',
+    hint: '배경 음악 분위기를 적어주세요',
     multiline: false
   }
 ];
