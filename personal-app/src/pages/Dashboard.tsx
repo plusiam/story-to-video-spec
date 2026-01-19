@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorks } from '@/hooks/useWorks';
-import { Plus, BookOpen, LogOut, Sparkles } from 'lucide-react';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { OnboardingTutorial } from '@/components/onboarding';
+import { Plus, BookOpen, LogOut, Sparkles, HelpCircle, Rocket } from 'lucide-react';
 
 /**
  * 대시보드 (내 작품 목록)
@@ -10,6 +12,7 @@ import { Plus, BookOpen, LogOut, Sparkles } from 'lucide-react';
 export default function DashboardPage() {
   const { user, isAdmin, signOut } = useAuth();
   const { works, isLoading, fetchWorks } = useWorks(user?.id);
+  const { showOnboarding, completeOnboarding, skipOnboarding, triggerOnboarding } = useOnboarding();
 
   useEffect(() => {
     fetchWorks();
@@ -17,6 +20,14 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* 온보딩 튜토리얼 */}
+      {showOnboarding && (
+        <OnboardingTutorial
+          onComplete={completeOnboarding}
+          onSkip={skipOnboarding}
+        />
+      )}
+
       {/* 헤더 */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
@@ -25,6 +36,15 @@ export default function DashboardPage() {
             <span className="title-handwriting text-xl text-primary-500">스토리 웹학습지</span>
           </Link>
           <div className="flex items-center gap-2">
+            {/* 도움말 버튼 */}
+            <button
+              onClick={triggerOnboarding}
+              className="btn btn-ghost text-sm flex items-center gap-1"
+              title="사용법 보기"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">도움말</span>
+            </button>
             {isAdmin && (
               <Link to="/admin" className="btn btn-ghost text-sm">
                 관리자
@@ -75,21 +95,33 @@ export default function DashboardPage() {
 
           {isLoading ? (
             <div className="text-center py-12 text-gray-500">
+              <div className="animate-spin text-4xl mb-4">⏳</div>
               불러오는 중...
             </div>
           ) : works.length === 0 ? (
-            <div className="card text-center py-12">
-              <div className="text-5xl mb-4">📝</div>
-              <h3 className="text-lg font-medium text-gray-800 mb-2">
-                아직 작품이 없어요
+            <div className="card text-center py-12 bg-gradient-to-br from-blue-50 to-purple-50">
+              <div className="text-6xl mb-4">📝</div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                첫 스토리를 만들어볼까요?
               </h3>
-              <p className="text-gray-500 mb-6">
-                첫 번째 스토리를 만들어볼까요?
+              <p className="text-gray-600 mb-6">
+                나만의 멋진 그림책 스토리가 시작돼요!
               </p>
-              <Link to="/create" className="btn btn-primary inline-flex items-center gap-2">
-                <Sparkles className="w-4 h-4" />
+              <Link to="/create" className="btn btn-primary inline-flex items-center gap-2 px-6 py-3 text-lg">
+                <Rocket className="w-5 h-5" />
                 새 작품 시작하기
               </Link>
+
+              {/* 첫 사용자를 위한 추가 안내 */}
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <button
+                  onClick={triggerOnboarding}
+                  className="text-primary-500 hover:underline flex items-center gap-1 mx-auto text-sm"
+                >
+                  <HelpCircle className="w-4 h-4" />
+                  사용법이 궁금하다면?
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -120,9 +152,35 @@ export default function DashboardPage() {
                   </div>
                 </Link>
               ))}
+
+              {/* 새 작품 카드 */}
+              <Link
+                to="/create"
+                className="card border-2 border-dashed border-gray-200 hover:border-primary-300 hover:bg-primary-50 transition-all flex items-center justify-center min-h-[100px] group"
+              >
+                <div className="text-center">
+                  <Plus className="w-8 h-8 text-gray-300 group-hover:text-primary-400 mx-auto mb-2 transition-colors" />
+                  <span className="text-gray-400 group-hover:text-primary-500 font-medium transition-colors">
+                    새 작품 추가
+                  </span>
+                </div>
+              </Link>
             </div>
           )}
         </section>
+
+        {/* 하단 도움말 */}
+        {works.length > 0 && (
+          <div className="mt-8 text-center">
+            <button
+              onClick={triggerOnboarding}
+              className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1 mx-auto"
+            >
+              <Sparkles className="w-4 h-4" />
+              사용법 다시 보기
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );
