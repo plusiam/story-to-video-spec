@@ -1,20 +1,21 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 
-// Pages
-import HomePage from '@/pages/Home';
-import LoginPage from '@/pages/Login';
-import AuthCallbackPage from '@/pages/AuthCallback';
-import DashboardPage from '@/pages/Dashboard';
-import CreatePage from '@/pages/Create';
-import WorkEditPage from '@/pages/WorkEdit';
-import PendingApprovalPage from '@/pages/PendingApproval';
-import AdminDashboardPage from '@/pages/admin/Dashboard';
-import AdminUsersPage from '@/pages/admin/Users';
-
 // Components
 import { LoadingScreen } from '@/components/LoadingScreen';
+
+// Lazy-loaded Pages (코드 스플리팅)
+const HomePage = lazy(() => import('@/pages/Home'));
+const LoginPage = lazy(() => import('@/pages/Login'));
+const AuthCallbackPage = lazy(() => import('@/pages/AuthCallback'));
+const DashboardPage = lazy(() => import('@/pages/Dashboard'));
+const CreatePage = lazy(() => import('@/pages/Create'));
+const WorkEditPage = lazy(() => import('@/pages/WorkEdit'));
+const PendingApprovalPage = lazy(() => import('@/pages/PendingApproval'));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/Dashboard'));
+const AdminUsersPage = lazy(() => import('@/pages/admin/Users'));
 
 /**
  * 인증 필요 라우트
@@ -59,6 +60,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
  */
 function AppRoutes() {
   return (
+    <Suspense fallback={<LoadingScreen />}>
     <Routes>
         {/* Public Routes */}
         <Route path="/" element={<HomePage />} />
@@ -98,6 +100,7 @@ function AppRoutes() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+    </Suspense>
   );
 }
 
