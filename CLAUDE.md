@@ -1,34 +1,23 @@
-# Story Creator - 프로젝트 컨텍스트
+# Story Creator - Claude 컨텍스트
 
-> 이 파일은 Claude가 프로젝트 작업 시 참조하는 컨텍스트 문서입니다.
-
----
-
-## 🎯 프로젝트 개요
-
-**스토리 구성 학습지** - 초등학생을 위한 4컷 스토리(기-승-전-결) 창작 웹 애플리케이션
-
-### 핵심 가치
-```
-"AI가 이미지/영상을 만드는 시대,
- 우리는 AI에게 '무엇을 만들어야 하는지' 잘 알려주는 도구를 만든다."
-```
+> **⚠️ 중요**: 이 프로젝트 작업 시 반드시 `MASTER_PLAN.md`를 먼저 읽으세요!
 
 ---
 
-## ⚠️ 중요 지침
+## 📖 문서 우선순위
 
-### ✅ 해야 할 것
-- `docs/DEVELOPMENT_PLAN_v2.md` 참조 (최신 개발 계획)
-- 프롬프트 최적화 기능 개발
-- 다양한 문서 내보내기 형식 지원
-- 한글 프롬프트 품질 향상
+```
+1️⃣ MASTER_PLAN.md     ← 최우선! 전체 전략 및 로드맵
+2️⃣ CLAUDE.md          ← 이 파일 (프로젝트 컨텍스트)
+3️⃣ docs/              ← 상세 기획 문서
+4️⃣ docs/history/      ← 과거 문서 (참고용, 폐기된 계획 포함)
+```
 
-### ❌ 하지 말아야 할 것
-- `docs/history/` 폴더의 문서 참조 (폐기된 계획)
-- AI 이미지/영상 직접 생성 기능 개발
-- API 키 입력/관리 기능 개발
-- 외부 AI API 연동 코드 작성
+---
+
+## 🎯 프로젝트 한 줄 요약
+
+**Ttori Storyteller(AI 아이디어) + Story Worksheet(제작 도구) 통합 플랫폼**
 
 ---
 
@@ -36,21 +25,37 @@
 
 ```
 story-creator/
-├── personal-app/          # 메인 React 앱
+├── MASTER_PLAN.md        # ⭐ 최우선 참조 - 전체 전략
+├── CLAUDE.md             # 이 파일
+├── README.md             # 프로젝트 개요
+│
+├── personal-app/         # 개인 모드 (React + Supabase)
 │   ├── src/
-│   │   ├── components/    # UI 컴포넌트
-│   │   ├── pages/         # 페이지 컴포넌트
-│   │   ├── hooks/         # 커스텀 훅
-│   │   ├── lib/           # 유틸리티
-│   │   ├── contexts/      # React Context
-│   │   └── types/         # TypeScript 타입
-│   └── ...
-├── docs/
-│   ├── DEVELOPMENT_PLAN_v2.md  # ✅ 최신 개발 계획
-│   └── history/                 # ❌ 폐기된 문서 (참조 금지)
-├── landing/               # 랜딩 페이지
-└── CLAUDE.md              # 이 파일
+│   │   ├── components/   # UI 컴포넌트
+│   │   ├── pages/        # 페이지 컴포넌트
+│   │   ├── hooks/        # 커스텀 훅
+│   │   ├── lib/          # 유틸리티
+│   │   └── types/        # TypeScript 타입
+│   └── supabase/         # DB 마이그레이션
+│
+├── landing/              # 통합 랜딩 페이지
+│
+├── classroom-gas/        # 학급 모드 참조 (별도 저장소로 분리됨)
+│
+└── docs/
+    ├── (기획 문서들)
+    └── history/          # ❌ 폐기된 문서 (참조 금지)
 ```
+
+---
+
+## 🔗 연관 시스템
+
+| 시스템 | 역할 | 위치 |
+|--------|------|------|
+| **Ttori Storyteller** | AI 대화로 스토리 아이디어 생성 | Google Opal |
+| **Story Worksheet Personal** | 개인용 제작 도구 | 이 저장소 |
+| **Story Worksheet Classroom** | 학급용 제작 도구 | 별도 저장소 (GAS) |
 
 ---
 
@@ -58,41 +63,38 @@ story-creator/
 
 | 영역 | 기술 |
 |------|------|
-| 프론트엔드 | React 18 + TypeScript |
+| 프론트엔드 | React 18 + TypeScript + Vite |
 | 스타일링 | Tailwind CSS |
-| 상태관리 | Zustand + Context API |
-| 백엔드 | Supabase (Auth + DB) |
-| 빌드 | Vite |
-| 배포 | Vercel |
+| 상태관리 | Zustand |
+| 백엔드 | Supabase (Auth + DB + Storage) |
+| 배포 | Vercel (story-worksheet.vercel.app) |
 
 ---
 
-## 📋 현재 개발 단계
+## ✅ 해야 할 것
 
-### Phase 1: 프롬프트 최적화 시스템 (진행 예정)
-- [ ] 이미지 AI별 프롬프트 템플릿 (Gemini, DALL-E, Midjourney 등)
-- [ ] 영상 AI별 프롬프트 템플릿 (Sora, Google Vids 등)
-- [ ] 일괄 복사 및 파일 내보내기
+- `MASTER_PLAN.md`의 로드맵 따르기
+- Ttori ↔ Worksheet 연동 개발
+- 한글 UI/프롬프트 우선
+- JSON 데이터 표준 형식 준수
 
-### Phase 2: 문서 내보내기 강화 (진행 예정)
-- [ ] 나레이션 스크립트, 시나리오 대본
-- [ ] 스토리보드 PDF
-- [ ] 프롬프트 가이드 PDF
+## ❌ 하지 말아야 할 것
 
-### Phase 3: 개인 모드 MVP (진행 예정)
-- [ ] 간소화된 회원가입 (이메일만)
-- [ ] 자동 승인 시스템
+- `docs/history/` 문서 참조 (폐기된 계획)
+- 레거시 story-maker 저장소 코드 사용
+- API 키 입력/관리 기능 (보안 이슈)
 
 ---
 
-## 💡 개발 시 참고사항
+## 💡 핵심 원칙
 
-1. **프롬프트 품질이 핵심**: 각 AI 서비스에 최적화된 프롬프트 생성에 집중
-2. **한글 지원 우선**: 초등학생 대상이므로 한글 프롬프트 품질 중요
-3. **서버 비용 Zero**: 클라이언트 사이드 처리, 외부 API 연동 없음
-4. **교육적 가치**: 학생들이 AI 도구 사용법을 배울 수 있도록
+1. **Ttori = 아이디어 씨앗** (저장 없음, 빠른 생성)
+2. **Worksheet = 완성 도구** (DB 저장, 편집, 공유)
+3. **JSON = 연결 고리** (두 시스템 간 데이터 표준)
+4. **한글 우선** (초등학생 대상)
+5. **무료 우선** (교육 접근성)
 
 ---
 
-**문서 버전**: 2.0
-**최종 수정**: 2026-01-19
+**문서 버전**: 3.0
+**최종 수정**: 2026-01-21
