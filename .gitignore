@@ -41,3 +41,8 @@ coverage/
 *.local
 .cache/
 personal-app/package-lock.json
+
+# Development docs (local only)
+docs/
+MASTER_PLAN.md
+DEVELOPMENT_PLAN*.md
