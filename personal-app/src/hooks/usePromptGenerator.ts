@@ -174,7 +174,9 @@ export const usePromptGenerator = (
       setTimeout(() => setCopiedPromptId(null), 2000);
       return true;
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      if (import.meta.env.DEV) {
+        console.error('Failed to copy to clipboard:', error);
+      }
       return false;
     }
   }, []);
@@ -187,7 +189,9 @@ export const usePromptGenerator = (
       setTimeout(() => setCopiedPromptId(null), 2000);
       return true;
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      if (import.meta.env.DEV) {
+        console.error('Failed to copy to clipboard:', error);
+      }
       return false;
     }
   }, []);

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   X,
   ChevronRight,
@@ -92,7 +92,7 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === TUTORIAL_STEPS.length - 1;
 
-  const goToNextStep = () => {
+  const goToNextStep = useCallback(() => {
     if (isAnimating) return;
     if (isLastStep) {
       onComplete();
@@ -103,16 +103,16 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
       setCurrentStep(prev => prev + 1);
       setIsAnimating(false);
     }, 150);
-  };
+  }, [isAnimating, isLastStep, onComplete]);
 
-  const goToPrevStep = () => {
+  const goToPrevStep = useCallback(() => {
     if (isAnimating || isFirstStep) return;
     setIsAnimating(true);
     setTimeout(() => {
       setCurrentStep(prev => prev - 1);
       setIsAnimating(false);
     }, 150);
-  };
+  }, [isAnimating, isFirstStep]);
 
   // 키보드 네비게이션
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function OnboardingTutorial({ onComplete, onSkip }: OnboardingTut
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentStep, isAnimating]);
+  }, [goToNextStep, goToPrevStep, onSkip]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">

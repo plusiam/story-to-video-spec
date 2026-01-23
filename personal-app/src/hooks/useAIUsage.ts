@@ -30,7 +30,9 @@ export function useAIUsage(userId: string | undefined) {
         .single();
 
       if (fetchError) {
+        if (import.meta.env.DEV) {
         console.warn('Failed to check user role:', fetchError.message);
+      }
         return;
       }
 
@@ -46,7 +48,9 @@ export function useAIUsage(userId: string | undefined) {
         setUsageStatus(prev => ({ ...prev, isUnlimited: true }));
       }
     } catch (err) {
-      console.error('Failed to check API key:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to check API key:', err);
+      }
     }
   }, [userId]);
 
@@ -74,7 +78,9 @@ export function useAIUsage(userId: string | undefined) {
         isUnlimited: isAdmin
       });
     } catch (err) {
-      console.error('Failed to fetch AI usage:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to fetch AI usage:', err);
+      }
       setError(err instanceof Error ? err.message : 'AI 사용량 조회 실패');
     } finally {
       setIsLoading(false);
@@ -214,7 +220,9 @@ export function useVisualDNA(workId: string | undefined) {
 
       return null;
     } catch (err) {
-      console.error('Failed to fetch visual DNA:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to fetch visual DNA:', err);
+      }
       setError(err instanceof Error ? err.message : '비주얼 DNA 조회 실패');
       return null;
     } finally {
@@ -235,7 +243,9 @@ export function useVisualDNA(workId: string | undefined) {
       setVisualDNA(dna);
       return true;
     } catch (err) {
-      console.error('Failed to save visual DNA:', err);
+      if (import.meta.env.DEV) {
+        console.error('Failed to save visual DNA:', err);
+      }
       setError(err instanceof Error ? err.message : '비주얼 DNA 저장 실패');
       return false;
     } finally {

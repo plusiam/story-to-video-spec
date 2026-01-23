@@ -64,7 +64,7 @@ export const generatePromptForScene = (
     mainPrompt: finalPrompt,
     mainPromptEn: config.language === 'both' ? mainPrompt : undefined,
     negativePrompt,
-    parameters: parameters as any,
+    parameters: parameters as Record<string, unknown>,
     promptLength: finalPrompt.length,
     createdAt: new Date()
   };
