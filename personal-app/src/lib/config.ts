@@ -3,10 +3,16 @@
  */
 export const CONFIG = {
   // MVP 단계: 자동 승인 (true) / 정식: 관리자 승인 (false)
-  AUTO_APPROVE_USERS: true,  // 현재 자동 승인 모드
+  AUTO_APPROVE_USERS: import.meta.env.VITE_AUTO_APPROVE_USERS === 'true',
 
   // AI 기능 활성화 여부
   ENABLE_AI_FEATURES: import.meta.env.VITE_ENABLE_AI_FEATURES === 'true',
+
+  // 관리자 이메일 목록 (자동 승인 + 관리자 권한 부여)
+  ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || '')
+    .split(',')
+    .map((email: string) => email.trim().toLowerCase())
+    .filter((email: string) => email.length > 0),
 
   // 앱 버전
   VERSION: '1.0.0',

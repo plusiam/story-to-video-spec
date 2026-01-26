@@ -44,18 +44,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return data as User;
     };
 
+    // 관리자 이메일 여부 확인 (내부 함수)
+    const isAdminEmail = (email: string): boolean => {
+      const normalizedEmail = email.toLowerCase().trim();
+      return CONFIG.ADMIN_EMAILS.includes(normalizedEmail);
+    };
+
     // 사용자 프로필 생성 (내부 함수)
     const createProfile = async (userId: string, email: string, provider: string) => {
-      logger.log('[AuthContext] 🆕 Creating new profile:', { userId, email, provider });
+      const isAdmin = isAdminEmail(email);
+      const shouldAutoApprove = CONFIG.AUTO_APPROVE_USERS || isAdmin;
+
+      logger.log('[AuthContext] 🆕 Creating new profile:', {
+        userId,
+        email,
+        provider,
+        isAdmin,
+        shouldAutoApprove
+      });
+
       const { data, error } = await supabase
         .from('users')
         .insert({
           id: userId,
           email,
           provider,
-          status: CONFIG.AUTO_APPROVE_USERS ? 'approved' : 'pending',
-          approved_at: CONFIG.AUTO_APPROVE_USERS ? new Date().toISOString() : null,
-          role: 'user',
+          status: shouldAutoApprove ? 'approved' : 'pending',
+          approved_at: shouldAutoApprove ? new Date().toISOString() : null,
+          role: isAdmin ? 'admin' : 'user',
         })
         .select()
         .single();
@@ -65,6 +81,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       logger.log('[AuthContext] ✅ Profile created successfully:', data);
+      if (isAdmin) {
+        logger.log('[AuthContext] 👑 Admin privileges granted to:', email);
+      }
       return data as User;
     };
 
@@ -185,6 +204,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               session.user.email || '',
               session.user.app_metadata.provider || 'email'
             );
+          } else {
+            // 기존 사용자가 관리자 이메일인데 아직 admin이 아닌 경우 승격
+            const email = session.user.email || '';
+            if (isAdminEmail(email) && profile.role !== 'admin') {
+              logger.log('[AuthContext] 👑 Upgrading existing user to admin:', email);
+              const { data: updatedProfile, error: updateError } = await supabase
+                .from('users')
+                .update({
+                  role: 'admin',
+                  status: 'approved',
+                  approved_at: profile.approved_at || new Date().toISOString(),
+                })
+                .eq('id', session.user.id)
+                .select()
+                .single();
+
+              if (!updateError && updatedProfile) {
+                profile = updatedProfile as User;
+                logger.log('[AuthContext] ✅ Admin upgrade successful');
+              }
+            }
           }
 
           if (!isMounted) {
