@@ -10,7 +10,7 @@ interface AuthContextType extends AuthState {
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
-  updateNickname: (nickname: string) => Promise<void>;
+  updateFullName: (fullName: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -22,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isApproved: false,
     isAdmin: false,
+    isJudge: false,
   });
 
   // 인증 상태 변경 리스너
@@ -52,16 +53,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return CONFIG.ADMIN_EMAILS.includes(normalizedEmail);
     };
 
+    // 심사위원 이메일 여부 확인 (내부 함수)
+    const isJudgeEmail = (email: string): boolean => {
+      const normalizedEmail = email.toLowerCase().trim();
+      return CONFIG.JUDGE_EMAILS.includes(normalizedEmail);
+    };
+
+    // 이메일 기반 역할 결정 (내부 함수)
+    const determineRole = (email: string): 'admin' | 'judge' | 'user' => {
+      if (isAdminEmail(email)) return 'admin';
+      if (isJudgeEmail(email)) return 'judge';
+      return 'user';
+    };
+
     // 사용자 프로필 생성 (내부 함수)
-    const createProfile = async (userId: string, email: string, provider: string) => {
-      const isAdmin = isAdminEmail(email);
-      const shouldAutoApprove = CONFIG.AUTO_APPROVE_USERS || isAdmin;
+    const createProfile = async (userId: string, email: string) => {
+      const role = determineRole(email);
+      const isPrivileged = role === 'admin' || role === 'judge';
+      const shouldAutoApprove = CONFIG.AUTO_APPROVE_USERS || isPrivileged;
 
       logger.log('[AuthContext] 🆕 Creating new profile:', {
         userId,
         email,
-        provider,
-        isAdmin,
+        role,
         shouldAutoApprove
       });
 
@@ -70,10 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .insert({
           id: userId,
           email,
-          provider,
-          status: shouldAutoApprove ? 'approved' : 'pending',
-          approved_at: shouldAutoApprove ? new Date().toISOString() : null,
-          role: isAdmin ? 'admin' : 'user',
+          role,
+          is_approved: shouldAutoApprove,
         })
         .select()
         .single();
@@ -83,8 +95,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return null;
       }
       logger.log('[AuthContext] ✅ Profile created successfully:', data);
-      if (isAdmin) {
+      if (role === 'admin') {
         logger.log('[AuthContext] 👑 Admin privileges granted to:', email);
+      } else if (role === 'judge') {
+        logger.log('[AuthContext] ⚖️ Judge privileges granted to:', email);
       }
       return data as User;
     };
@@ -120,8 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logger.log('[AuthContext] 📝 Profile not found, creating new profile');
             profile = await createProfile(
               session.user.id,
-              session.user.email || '',
-              session.user.app_metadata.provider || 'email'
+              session.user.email || ''
             );
           }
 
@@ -132,16 +145,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           logger.log('[AuthContext] ✅ Setting authenticated state:', {
             profile,
-            isApproved: profile?.status === 'approved',
-            isAdmin: profile?.role === 'admin'
+            isApproved: profile?.is_approved === true,
+            isAdmin: profile?.role === 'admin',
+            isJudge: profile?.role === 'judge'
           });
 
           setState({
             user: profile,
             isLoading: false,
             isAuthenticated: true,
-            isApproved: profile?.status === 'approved',
+            isApproved: profile?.is_approved === true,
             isAdmin: profile?.role === 'admin',
+            isJudge: profile?.role === 'judge',
           });
         } else {
           logger.log('[AuthContext] 🚫 No session found, setting unauthenticated state');
@@ -151,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: false,
             isApproved: false,
             isAdmin: false,
+            isJudge: false,
           });
         }
       } catch (error) {
@@ -173,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: false,
             isApproved: false,
             isAdmin: false,
+            isJudge: false,
           });
         }
       }
@@ -203,20 +220,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logger.log('[AuthContext] 📝 Creating new profile for signed-in user');
             profile = await createProfile(
               session.user.id,
-              session.user.email || '',
-              session.user.app_metadata.provider || 'email'
+              session.user.email || ''
             );
           } else {
-            // 기존 사용자가 관리자 이메일인데 아직 admin이 아닌 경우 승격
+            // 기존 사용자의 역할 업그레이드 확인
             const email = session.user.email || '';
-            if (isAdminEmail(email) && profile.role !== 'admin') {
-              logger.log('[AuthContext] 👑 Upgrading existing user to admin:', email);
+            const expectedRole = determineRole(email);
+
+            // 역할 승격이 필요한 경우 (admin > judge > user 순서)
+            const roleOrder: Record<string, number> = { user: 0, judge: 1, admin: 2 };
+            const currentRoleLevel = roleOrder[profile.role || 'user'] || 0;
+            const expectedRoleLevel = roleOrder[expectedRole];
+
+            if (expectedRoleLevel > currentRoleLevel) {
+              logger.log(`[AuthContext] ⬆️ Upgrading user to ${expectedRole}:`, email);
               const { data: updatedProfile, error: updateError } = await supabase
                 .from('users')
                 .update({
-                  role: 'admin',
-                  status: 'approved',
-                  approved_at: profile.approved_at || new Date().toISOString(),
+                  role: expectedRole,
+                  is_approved: true,
                 })
                 .eq('id', session.user.id)
                 .select()
@@ -224,7 +246,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               if (!updateError && updatedProfile) {
                 profile = updatedProfile as User;
-                logger.log('[AuthContext] ✅ Admin upgrade successful');
+                logger.log(`[AuthContext] ✅ ${expectedRole} upgrade successful`);
               }
             }
           }
@@ -234,20 +256,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // 마지막 로그인 시간 업데이트
-          logger.log('[AuthContext] 🕐 Updating last login time');
-          await supabase
-            .from('users')
-            .update({ last_login_at: new Date().toISOString() })
-            .eq('id', session.user.id);
-
           logger.log('[AuthContext] ✅ Setting authenticated state from SIGNED_IN event');
           setState({
             user: profile,
             isLoading: false,
             isAuthenticated: true,
-            isApproved: profile?.status === 'approved',
+            isApproved: profile?.is_approved === true,
             isAdmin: profile?.role === 'admin',
+            isJudge: profile?.role === 'judge',
           });
         } else if (event === 'SIGNED_OUT') {
           logger.log('[AuthContext] 🚪 SIGNED_OUT event - clearing auth state');
@@ -257,6 +273,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAuthenticated: false,
             isApproved: false,
             isAdmin: false,
+            isJudge: false,
           });
         } else {
           logger.log('[AuthContext] ℹ️ Other auth event:', event, '- no action taken');
@@ -339,23 +356,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // 닉네임 업데이트
-  const updateNickname = useCallback(async (nickname: string) => {
+  // 이름 업데이트
+  const updateFullName = useCallback(async (fullName: string) => {
     if (!state.user) return;
 
     const { error } = await supabase
       .from('users')
-      .update({ nickname })
+      .update({ full_name: fullName })
       .eq('id', state.user.id);
 
     if (error) {
-      logger.error('Update nickname error:', error);
+      logger.error('Update full_name error:', error);
       throw error;
     }
 
     setState(prev => ({
       ...prev,
-      user: prev.user ? { ...prev.user, nickname } : null,
+      user: prev.user ? { ...prev.user, full_name: fullName } : null,
     }));
   }, [state.user]);
 
@@ -367,7 +384,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithPassword,
       signUp,
       signOut,
-      updateNickname,
+      updateFullName,
     }}>
       {children}
     </AuthContext.Provider>

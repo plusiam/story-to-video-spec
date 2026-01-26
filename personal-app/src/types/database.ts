@@ -1,5 +1,6 @@
 /**
  * Supabase Database Types
+ * 실제 DB 스키마에 맞게 정의
  */
 export type Json =
   | string
@@ -16,44 +17,32 @@ export interface Database {
         Row: {
           id: string;
           email: string;
-          nickname: string | null;
+          full_name: string | null;
           avatar_url: string | null;
-          provider: string;
-          status: 'pending' | 'approved' | 'rejected' | 'suspended';
-          approved_at: string | null;
-          approved_by: string | null;
-          rejection_reason: string | null;
-          role: 'user' | 'admin';
-          created_at: string;
-          last_login_at: string | null;
+          role: string | null;  // 'user' | 'judge' | 'admin' (text 타입)
+          is_approved: boolean | null;
+          created_at: string | null;
+          updated_at: string | null;
         };
         Insert: {
-          id?: string;
+          id: string;
           email: string;
-          nickname?: string | null;
+          full_name?: string | null;
           avatar_url?: string | null;
-          provider?: string;
-          status?: 'pending' | 'approved' | 'rejected' | 'suspended';
-          approved_at?: string | null;
-          approved_by?: string | null;
-          rejection_reason?: string | null;
-          role?: 'user' | 'admin';
-          created_at?: string;
-          last_login_at?: string | null;
+          role?: string | null;
+          is_approved?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Update: {
           id?: string;
           email?: string;
-          nickname?: string | null;
+          full_name?: string | null;
           avatar_url?: string | null;
-          provider?: string;
-          status?: 'pending' | 'approved' | 'rejected' | 'suspended';
-          approved_at?: string | null;
-          approved_by?: string | null;
-          rejection_reason?: string | null;
-          role?: 'user' | 'admin';
-          created_at?: string;
-          last_login_at?: string | null;
+          role?: string | null;
+          is_approved?: boolean | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Relationships: [];
       };
@@ -62,37 +51,34 @@ export interface Database {
           id: string;
           user_id: string;
           title: string;
-          step: number;
+          theme: string | null;
+          characters: string[] | null;
           panels: Json;
-          ai_generated: Json | null;
-          is_public: boolean;
-          status: 'draft' | 'complete';
-          created_at: string;
-          updated_at: string;
+          notes: string | null;
+          created_at: string | null;
+          updated_at: string | null;
         };
         Insert: {
           id?: string;
           user_id: string;
-          title?: string;
-          step?: number;
+          title: string;
+          theme?: string | null;
+          characters?: string[] | null;
           panels?: Json;
-          ai_generated?: Json | null;
-          is_public?: boolean;
-          status?: 'draft' | 'complete';
-          created_at?: string;
-          updated_at?: string;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Update: {
           id?: string;
           user_id?: string;
           title?: string;
-          step?: number;
+          theme?: string | null;
+          characters?: string[] | null;
           panels?: Json;
-          ai_generated?: Json | null;
-          is_public?: boolean;
-          status?: 'draft' | 'complete';
-          created_at?: string;
-          updated_at?: string;
+          notes?: string | null;
+          created_at?: string | null;
+          updated_at?: string | null;
         };
         Relationships: [
           {
@@ -103,12 +89,64 @@ export interface Database {
           }
         ];
       };
+      visual_dnas: {
+        Row: {
+          id: string;
+          work_id: string;
+          user_id: string;
+          art_style: string | null;
+          color_tone: string | null;
+          lighting: string | null;
+          environment: string | null;
+          characters: Json | null;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          work_id: string;
+          user_id: string;
+          art_style?: string | null;
+          color_tone?: string | null;
+          lighting?: string | null;
+          environment?: string | null;
+          characters?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          work_id?: string;
+          user_id?: string;
+          art_style?: string | null;
+          color_tone?: string | null;
+          lighting?: string | null;
+          environment?: string | null;
+          characters?: Json | null;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "visual_dnas_user_id_fkey";
+            columns: ["user_id"];
+            referencedRelation: "users";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "visual_dnas_work_id_fkey";
+            columns: ["work_id"];
+            referencedRelation: "works";
+            referencedColumns: ["id"];
+          }
+        ];
+      };
       approval_logs: {
         Row: {
           id: string;
           user_id: string;
           action: string;
-          admin_id: string;
+          admin_id: string | null;
           reason: string | null;
           created_at: string;
         };
@@ -116,7 +154,7 @@ export interface Database {
           id?: string;
           user_id: string;
           action: string;
-          admin_id: string;
+          admin_id?: string | null;
           reason?: string | null;
           created_at?: string;
         };
@@ -124,24 +162,11 @@ export interface Database {
           id?: string;
           user_id?: string;
           action?: string;
-          admin_id?: string;
+          admin_id?: string | null;
           reason?: string | null;
           created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: "approval_logs_user_id_fkey";
-            columns: ["user_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "approval_logs_admin_id_fkey";
-            columns: ["admin_id"];
-            referencedRelation: "users";
-            referencedColumns: ["id"];
-          }
-        ];
+        Relationships: [];
       };
     };
     Views: {
@@ -162,14 +187,17 @@ export interface Database {
 // Convenience types
 export type User = Database['public']['Tables']['users']['Row'];
 export type Work = Database['public']['Tables']['works']['Row'];
+export type VisualDna = Database['public']['Tables']['visual_dnas']['Row'];
 export type ApprovalLog = Database['public']['Tables']['approval_logs']['Row'];
 
 // Insert types
 export type UserInsert = Database['public']['Tables']['users']['Insert'];
 export type WorkInsert = Database['public']['Tables']['works']['Insert'];
+export type VisualDnaInsert = Database['public']['Tables']['visual_dnas']['Insert'];
 export type ApprovalLogInsert = Database['public']['Tables']['approval_logs']['Insert'];
 
 // Update types
 export type UserUpdate = Database['public']['Tables']['users']['Update'];
 export type WorkUpdate = Database['public']['Tables']['works']['Update'];
+export type VisualDnaUpdate = Database['public']['Tables']['visual_dnas']['Update'];
 export type ApprovalLogUpdate = Database['public']['Tables']['approval_logs']['Update'];

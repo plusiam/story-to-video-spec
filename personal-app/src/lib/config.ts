@@ -14,6 +14,12 @@ export const CONFIG = {
     .map((email: string) => email.trim().toLowerCase())
     .filter((email: string) => email.length > 0),
 
+  // 심사위원 이메일 목록 (자동 승인 + 심사위원 권한 부여)
+  JUDGE_EMAILS: (import.meta.env.VITE_JUDGE_EMAILS || '')
+    .split(',')
+    .map((email: string) => email.trim().toLowerCase())
+    .filter((email: string) => email.length > 0),
+
   // 앱 버전
   VERSION: '1.0.0',
 
@@ -28,6 +34,7 @@ export const CONFIG = {
   // 사용자 역할
   USER_ROLE: {
     USER: 'user',
+    JUDGE: 'judge',
     ADMIN: 'admin',
   } as const,
 

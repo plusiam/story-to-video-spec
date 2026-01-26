@@ -34,4 +34,5 @@ export interface AuthState {
   isAuthenticated: boolean;
   isApproved: boolean;
   isAdmin: boolean;
+  isJudge: boolean;
 }

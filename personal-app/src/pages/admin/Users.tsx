@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { ArrowLeft, Check, X, Ban, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Check, X, RefreshCw } from 'lucide-react';
 import type { User } from '@/types';
 
 /**
@@ -11,7 +11,7 @@ import type { User } from '@/types';
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'suspended'>('all');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUsers = useCallback(async () => {
@@ -22,8 +22,10 @@ export default function AdminUsersPage() {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
+      if (filter === 'pending') {
+        query = query.eq('is_approved', false);
+      } else if (filter === 'approved') {
+        query = query.eq('is_approved', true);
       }
 
       const { data, error } = await query;
@@ -41,23 +43,12 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // 사용자 상태 변경
-  const updateUserStatus = async (userId: string, status: string, reason?: string) => {
+  // 사용자 승인 상태 변경
+  const updateUserApproval = async (userId: string, isApproved: boolean, reason?: string) => {
     try {
-      // 상태 업데이트
-      const updates: Record<string, unknown> = { status };
-
-      if (status === 'approved') {
-        updates.approved_at = new Date().toISOString();
-        updates.approved_by = currentUser?.id;
-      }
-      if (status === 'rejected') {
-        updates.rejection_reason = reason;
-      }
-
       const { error: updateError } = await supabase
         .from('users')
-        .update(updates)
+        .update({ is_approved: isApproved })
         .eq('id', userId);
 
       if (updateError) throw updateError;
@@ -66,7 +57,7 @@ export default function AdminUsersPage() {
       if (currentUser?.id) {
         await supabase.from('approval_logs').insert({
           user_id: userId,
-          action: status,
+          action: isApproved ? 'approved' : 'rejected',
           admin_id: currentUser.id,
           reason: reason ?? null,
         });
@@ -75,7 +66,7 @@ export default function AdminUsersPage() {
       // 목록 새로고침
       fetchUsers();
     } catch (error) {
-      console.error('Failed to update user status:', error);
+      console.error('Failed to update user approval:', error);
       alert('상태 변경에 실패했습니다.');
     }
   };
@@ -83,43 +74,31 @@ export default function AdminUsersPage() {
   // 승인
   const handleApprove = (userId: string) => {
     if (confirm('이 사용자를 승인하시겠습니까?')) {
-      updateUserStatus(userId, 'approved');
+      updateUserApproval(userId, true);
     }
   };
 
-  // 거절
+  // 거절 (승인 취소)
   const handleReject = (userId: string) => {
     const reason = prompt('거절 사유를 입력해주세요:');
     if (reason !== null) {
-      updateUserStatus(userId, 'rejected', reason);
+      updateUserApproval(userId, false, reason);
     }
   };
 
-  // 정지
-  const handleSuspend = (userId: string) => {
-    const reason = prompt('정지 사유를 입력해주세요:');
-    if (reason !== null) {
-      updateUserStatus(userId, 'suspended', reason);
+  const getStatusBadge = (isApproved: boolean | null) => {
+    if (isApproved === true) {
+      return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">승인</span>;
     }
+    return <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">대기</span>;
   };
 
-  // 정지 해제
-  const handleUnsuspend = (userId: string) => {
-    if (confirm('이 사용자의 정지를 해제하시겠습니까?')) {
-      updateUserStatus(userId, 'approved');
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <span className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full">대기</span>;
-      case 'approved':
-        return <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">승인</span>;
-      case 'rejected':
-        return <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">거절</span>;
-      case 'suspended':
-        return <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">정지</span>;
+  const getRoleBadge = (role: string | null) => {
+    switch (role) {
+      case 'admin':
+        return <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">관리자</span>;
+      case 'judge':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full">심사위원</span>;
       default:
         return null;
     }
@@ -153,7 +132,6 @@ export default function AdminUsersPage() {
             { key: 'all', label: '전체' },
             { key: 'pending', label: '승인 대기' },
             { key: 'approved', label: '승인됨' },
-            { key: 'suspended', label: '정지됨' },
           ].map(({ key, label }) => (
             <button
               key={key}
@@ -184,27 +162,20 @@ export default function AdminUsersPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium text-gray-800 truncate">
-                        {user.nickname || user.email}
+                        {user.full_name || user.email}
                       </span>
-                      {getStatusBadge(user.status)}
-                      {user.role === 'admin' && (
-                        <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                          관리자
-                        </span>
-                      )}
+                      {getStatusBadge(user.is_approved)}
+                      {getRoleBadge(user.role)}
                     </div>
                     <p className="text-sm text-gray-500 truncate">{user.email}</p>
                     <p className="text-xs text-gray-400 mt-1">
-                      가입일: {new Date(user.created_at).toLocaleDateString('ko-KR')}
-                      {user.last_login_at && (
-                        <> · 최근 접속: {new Date(user.last_login_at).toLocaleDateString('ko-KR')}</>
-                      )}
+                      가입일: {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : '-'}
                     </p>
                   </div>
 
                   {/* 액션 버튼 */}
                   <div className="flex gap-2 ml-4">
-                    {user.status === 'pending' && (
+                    {!user.is_approved && (
                       <>
                         <button
                           onClick={() => handleApprove(user.id)}
@@ -222,22 +193,13 @@ export default function AdminUsersPage() {
                         </button>
                       </>
                     )}
-                    {user.status === 'approved' && user.id !== currentUser?.id && (
+                    {user.is_approved && user.id !== currentUser?.id && (
                       <button
-                        onClick={() => handleSuspend(user.id)}
+                        onClick={() => handleReject(user.id)}
                         className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg"
-                        title="정지"
+                        title="승인 취소"
                       >
-                        <Ban className="w-5 h-5" />
-                      </button>
-                    )}
-                    {user.status === 'suspended' && (
-                      <button
-                        onClick={() => handleUnsuspend(user.id)}
-                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
-                        title="정지 해제"
-                      >
-                        <RefreshCw className="w-5 h-5" />
+                        <X className="w-5 h-5" />
                       </button>
                     )}
                   </div>

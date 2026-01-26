@@ -57,11 +57,11 @@ export default function PendingApprovalPage() {
               <span className="font-medium">{user.email}</span>
             </div>
             <p className="text-xs text-gray-500 mt-2">
-              가입일: {new Date(user.created_at).toLocaleDateString('ko-KR', {
+              가입일: {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
-              })}
+              }) : '-'}
             </p>
           </div>
         )}

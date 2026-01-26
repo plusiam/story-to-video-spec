@@ -67,7 +67,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold mb-1">
-                안녕하세요, {user?.nickname || '작가'}님! 👋
+                안녕하세요, {user?.full_name || '작가'}님! 👋
               </h1>
               <p className="text-white/80">
                 오늘도 멋진 이야기를 만들어볼까요?
@@ -135,19 +135,10 @@ export default function DashboardPage() {
                     <h3 className="font-medium text-gray-800 group-hover:text-primary-500 transition-colors">
                       {work.title || '제목 없음'}
                     </h3>
-                    <span className={`text-xs px-2 py-1 rounded-full ${
-                      work.status === 'complete'
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      {work.status === 'complete' ? '완료' : '작성 중'}
-                    </span>
                   </div>
                   <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>Step {work.step}/3</span>
-                    <span>•</span>
                     <span>
-                      {new Date(work.updated_at).toLocaleDateString('ko-KR')}
+                      {work.updated_at ? new Date(work.updated_at).toLocaleDateString('ko-KR') : '-'}
                     </span>
                   </div>
                 </Link>

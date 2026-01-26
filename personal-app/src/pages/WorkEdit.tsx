@@ -94,9 +94,12 @@ export default function WorkEditPage() {
               });
             }
           }
-          // 저장된 단계 복원
-          if (data.step && data.step >= 1 && data.step <= 3) {
-            setCurrentStep(data.step as 1 | 2 | 3);
+          // 저장된 단계 복원 (panels JSON 내에서)
+          if (data.panels && typeof data.panels === 'object') {
+            const savedData = data.panels as unknown as { step?: number };
+            if (savedData.step && savedData.step >= 1 && savedData.step <= 3) {
+              setCurrentStep(savedData.step as 1 | 2 | 3);
+            }
           }
         } else {
           navigate('/dashboard');
@@ -137,8 +140,7 @@ export default function WorkEditPage() {
     setIsSaving(true);
     const updated = await updateWork(id, {
       title,
-      panels: { panels, scenes } as unknown as import('@/types').Json,
-      step: currentStep
+      panels: { panels, scenes, step: currentStep } as unknown as import('@/types').Json,
     });
     if (updated) {
       setWork(updated);

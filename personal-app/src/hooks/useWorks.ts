@@ -52,9 +52,7 @@ export function useWorks(userId: string | undefined) {
         .insert({
           user_id: userId,
           title,
-          step: 1,
           panels: workData as unknown as Json,
-          status: 'draft' as const,
         })
         .select()
         .single();

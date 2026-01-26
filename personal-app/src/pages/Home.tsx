@@ -86,7 +86,7 @@ export default function HomePage() {
         {isAuthenticated && user && (
           <div className="text-center text-gray-500 text-sm">
             <p>
-              {user.nickname || user.email}님으로 로그인됨
+              {user.full_name || user.email}님으로 로그인됨
               {!isApproved && (
                 <span className="ml-2 text-orange-500">(승인 대기 중)</span>
               )}
