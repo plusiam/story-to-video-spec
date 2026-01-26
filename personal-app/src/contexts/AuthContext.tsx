@@ -7,6 +7,8 @@ import type { User, AuthState } from '@/types';
 interface AuthContextType extends AuthState {
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateNickname: (nickname: string) => Promise<void>;
 }
@@ -299,6 +301,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 이메일+비밀번호 로그인
+  const signInWithPassword = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      logger.error('Password sign in error:', error);
+      throw error;
+    }
+  }, []);
+
+  // 회원가입 (이메일+비밀번호)
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      logger.error('Sign up error:', error);
+      throw error;
+    }
+  }, []);
+
   // 로그아웃
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
@@ -333,6 +364,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ...state,
       signInWithGoogle,
       signInWithEmail,
+      signInWithPassword,
+      signUp,
       signOut,
       updateNickname,
     }}>
