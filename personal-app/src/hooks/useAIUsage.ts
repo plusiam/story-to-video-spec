@@ -4,8 +4,9 @@ import type { AIUsageStatus, VisualDNA } from '@/types';
 /**
  * AI 사용량 관리 훅
  * 로컬 스토리지 기반 일일 사용량 추적
+ * admin/judge 역할은 무제한 사용 가능
  */
-export function useAIUsage(userId: string | undefined) {
+export function useAIUsage(userId: string | undefined, userRole?: string) {
   const [usageStatus, setUsageStatus] = useState<AIUsageStatus>({
     usedCount: 0,
     dailyLimit: 5,
@@ -23,6 +24,18 @@ export function useAIUsage(userId: string | undefined) {
     setError(null);
 
     try {
+      const isPrivileged = userRole === 'admin' || userRole === 'judge';
+
+      if (isPrivileged) {
+        setUsageStatus({
+          usedCount: 0,
+          dailyLimit: 0,
+          remaining: 0,
+          isUnlimited: true
+        });
+        return;
+      }
+
       const today = new Date().toISOString().split('T')[0];
       const usageKey = `ai_usage_${userId}_${today}`;
       const savedUsage = localStorage.getItem(usageKey);
@@ -44,7 +57,7 @@ export function useAIUsage(userId: string | undefined) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, userRole]);
 
   // 사용량 증가 (AI 호출 전 실행)
   const incrementUsage = useCallback(async (): Promise<boolean> => {

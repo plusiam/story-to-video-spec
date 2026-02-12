@@ -19,7 +19,7 @@ export function useWorkEditor(id: string | undefined) {
   const { getWork, updateWork, deleteWork } = useWorks(user?.id);
 
   // AI 사용량 및 비주얼 DNA
-  const { usageStatus } = useAIUsage(user?.id);
+  const { usageStatus } = useAIUsage(user?.id, user?.role ?? undefined);
   const {
     visualDNA,
     saveVisualDNA,
