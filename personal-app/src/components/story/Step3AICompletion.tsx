@@ -6,7 +6,6 @@ import type { Scene, PanelScenes } from './sceneConfig';
 import { PANEL_COLORS, PANEL_LABELS } from './sceneConfig';
 import VisualDNASetup from './VisualDNASetup';
 import AIUsageBanner from './AIUsageBanner';
-import ApiKeyModal from './ApiKeyModal';
 
 interface Step3AICompletionProps {
   workId: string;
@@ -15,9 +14,6 @@ interface Step3AICompletionProps {
   onVisualDNAChange: (dna: VisualDNA) => void;
   onVisualDNASave: () => Promise<boolean>;
   usageStatus: AIUsageStatus;
-  hasApiKey: boolean;
-  onSaveApiKey: (key: string) => Promise<boolean>;
-  onRemoveApiKey: () => Promise<boolean>;
   onBack: () => void;
   isSaving: boolean;
 }
@@ -36,14 +32,10 @@ export default function Step3AICompletion({
   onVisualDNAChange,
   onVisualDNASave,
   usageStatus,
-  hasApiKey,
-  onSaveApiKey,
-  onRemoveApiKey,
   onBack,
   isSaving
 }: Step3AICompletionProps) {
   const [subStep, setSubStep] = useState<Step3SubStep>('visual-dna');
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
 
   // 비주얼 DNA 초기화
@@ -79,11 +71,7 @@ export default function Step3AICompletion({
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* AI 사용량 배너 */}
-      <AIUsageBanner
-        usageStatus={usageStatus}
-        hasApiKey={hasApiKey}
-        onSettingsClick={() => setShowApiKeyModal(true)}
-      />
+      <AIUsageBanner usageStatus={usageStatus} />
 
       {/* 서브 스텝 탭 */}
       <div className="flex border-b border-gray-200">
@@ -159,7 +147,7 @@ export default function Step3AICompletion({
           {/* 비주얼 DNA 요약 */}
           {currentDNA.characters.length > 0 && (
             <div className="bg-purple-50 rounded-xl p-3 sm:p-4">
-              <p className="text-xs text-purple-600 mb-1">✅ 적용된 비주얼 DNA:</p>
+              <p className="text-xs text-purple-600 mb-1">적용된 비주얼 DNA:</p>
               <p className="text-sm text-purple-800">
                 캐릭터: {currentDNA.characters.map(c => c.name).filter(Boolean).join(', ') || '미설정'} |
                 스타일: {currentDNA.artStyle} |
@@ -261,7 +249,7 @@ export default function Step3AICompletion({
 
           {/* 사용 가이드 */}
           <div className="bg-blue-50 rounded-xl p-4">
-            <h4 className="font-medium text-blue-800 mb-2">🎨 프롬프트 사용 방법</h4>
+            <h4 className="font-medium text-blue-800 mb-2">프롬프트 사용 방법</h4>
             <ol className="text-sm text-blue-700 space-y-1">
               <li>1. 원하는 장면의 "복사" 버튼 클릭</li>
               <li>2. Google AI Studio 또는 Gemini 앱 열기</li>
@@ -290,15 +278,6 @@ export default function Step3AICompletion({
           </div>
         </>
       )}
-
-      {/* API 키 모달 */}
-      <ApiKeyModal
-        isOpen={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-        onSave={onSaveApiKey}
-        hasExistingKey={hasApiKey}
-        onRemove={onRemoveApiKey}
-      />
     </div>
   );
 }
