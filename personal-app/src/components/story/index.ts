@@ -21,6 +21,9 @@ export {
   generateImagePrompt
 } from './sceneConfig';
 
+// 이친 가이드
+export { default as EchinGuideCard } from './EchinGuideCard';
+
 // Step 3: AI 완성
 export { default as Step3AICompletion } from './Step3AICompletion';
 export { default as VisualDNASetup } from './VisualDNASetup';

@@ -4,6 +4,7 @@ import { CONFIG } from '@/lib/config';
 import { useWorkEditor } from '@/hooks/useWorkEditor';
 import {
   FourPanelStory,
+  EchinGuideCard,
   Step2SceneExpansion,
   Step3AICompletion
 } from '@/components/story';
@@ -111,6 +112,11 @@ export default function WorkEditPage() {
         {/* Step 1: 4컷 스토리 패널 */}
         {editor.currentStep === 1 && (
           <>
+            {/* 이친 가이드 카드 */}
+            <div className="mb-6">
+              <EchinGuideCard step="step1" />
+            </div>
+
             <div className="card mb-6">
               <FourPanelStory
                 panels={editor.panels}

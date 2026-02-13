@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { ArrowLeft, ArrowRight, BookOpen } from 'lucide-react';
 import PanelSceneExpander from './PanelSceneExpander';
+import EchinGuideCard from './EchinGuideCard';
 import {
   type Scene,
   type PanelScenes,
@@ -78,6 +79,9 @@ export default function Step2SceneExpansion({
           </span>
         </p>
       </div>
+
+      {/* 이친 가이드 카드 */}
+      <EchinGuideCard step="step2" />
 
       {/* 진행률 바 */}
       <div className="space-y-1 sm:space-y-2">
