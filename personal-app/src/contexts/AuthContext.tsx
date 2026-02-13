@@ -115,103 +115,82 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return data as User;
     };
 
-    // 현재 세션 확인
-    const initializeAuth = async () => {
-      console.log('[Auth] initializeAuth START');
-      console.log('[Auth] CONFIG:', { ADMIN_EMAILS: CONFIG.ADMIN_EMAILS, AUTO_APPROVE: CONFIG.AUTO_APPROVE_USERS });
+    // 세션으로부터 인증 상태 설정하는 공통 함수
+    const handleSession = async (session: import('@supabase/supabase-js').Session | null, source: string) => {
+      console.log(`[Auth] handleSession (${source}):`, session ? `user=${session.user.email}` : 'NO SESSION');
 
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (!isMounted) return;
 
-        if (sessionError) {
-          console.error('[Auth] Session error:', sessionError);
+      if (session?.user) {
+        let profile = await getProfile(session.user.id);
+
+        if (!isMounted) return;
+
+        if (!profile) {
+          console.log('[Auth] No profile, creating...');
+          profile = await createProfile(session.user.id, session.user.email || '');
+        } else {
+          // 기존 사용자의 역할 업그레이드 확인
+          const email = session.user.email || '';
+          const expectedRole = determineRole(email);
+          const roleOrder: Record<string, number> = { user: 0, judge: 1, admin: 2 };
+          const currentRoleLevel = roleOrder[profile.role || 'user'] || 0;
+          const expectedRoleLevel = roleOrder[expectedRole];
+
+          if (expectedRoleLevel > currentRoleLevel) {
+            console.log(`[Auth] Upgrading role: ${profile.role} → ${expectedRole}`);
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from('users')
+              .update({ role: expectedRole, is_approved: true })
+              .eq('id', session.user.id)
+              .select()
+              .single();
+            if (!updateError && updatedProfile) {
+              profile = updatedProfile as User;
+            }
+          }
         }
 
         if (!isMounted) return;
 
-        console.log('[Auth] Session:', session ? `user=${session.user.email} id=${session.user.id}` : 'NO SESSION');
+        console.log('[Auth] FINAL STATE:', profile
+          ? `${profile.email} approved=${profile.is_approved} role=${profile.role}`
+          : 'NULL');
 
-        if (session?.user) {
-          let profile = await getProfile(session.user.id);
-
-          if (!isMounted) return;
-
-          // 프로필이 없으면 생성
-          if (!profile) {
-            console.log('[Auth] No profile found, creating...');
-            profile = await createProfile(
-              session.user.id,
-              session.user.email || ''
-            );
-          }
-
-          if (!isMounted) return;
-
-          console.log('[Auth] FINAL STATE:', {
-            profile: profile ? `${profile.email} approved=${profile.is_approved} role=${profile.role}` : 'NULL',
-            isApproved: profile?.is_approved === true,
-            isAdmin: profile?.role === 'admin',
-          });
-
+        sessionStorage.removeItem('guest_session');
+        setState({
+          user: profile,
+          isLoading: false,
+          isAuthenticated: true,
+          isApproved: profile?.is_approved === true,
+          isAdmin: profile?.role === 'admin',
+          isJudge: profile?.role === 'judge',
+          isGuest: false,
+        });
+      } else {
+        // 세션 없음 — 게스트 복원 확인
+        const guestSession = sessionStorage.getItem('guest_session');
+        if (guestSession === 'true') {
+          console.log('[Auth] Restoring guest session');
           setState({
-            user: profile,
+            user: {
+              id: CONFIG.GUEST_USER_ID,
+              email: CONFIG.GUEST_USER_EMAIL,
+              full_name: '체험 사용자',
+              avatar_url: null,
+              role: 'user',
+              is_approved: true,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            },
             isLoading: false,
             isAuthenticated: true,
-            isApproved: profile?.is_approved === true,
-            isAdmin: profile?.role === 'admin',
-            isJudge: profile?.role === 'judge',
-            isGuest: false,
+            isApproved: true,
+            isAdmin: false,
+            isJudge: false,
+            isGuest: true,
           });
         } else {
-          logger.log('[AuthContext] 🚫 No session found, checking guest state');
-          // 게스트 세션 복원 확인
-          const guestSession = sessionStorage.getItem('guest_session');
-          if (guestSession === 'true') {
-            logger.log('[AuthContext] 🎮 Restoring guest session');
-            setState({
-              user: {
-                id: CONFIG.GUEST_USER_ID,
-                email: CONFIG.GUEST_USER_EMAIL,
-                full_name: '체험 사용자',
-                avatar_url: null,
-                role: 'user',
-                is_approved: true,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              },
-              isLoading: false,
-              isAuthenticated: true,
-              isApproved: true,
-              isAdmin: false,
-              isJudge: false,
-              isGuest: true,
-            });
-          } else {
-            setState({
-              user: null,
-              isLoading: false,
-              isAuthenticated: false,
-              isApproved: false,
-              isAdmin: false,
-              isJudge: false,
-              isGuest: false,
-            });
-          }
-        }
-      } catch (error) {
-        // AbortError는 무시 (React StrictMode에서 발생)
-        if (error instanceof Error && error.name === 'AbortError') {
-          logger.log('[AuthContext] 🔄 AbortError detected - silently retrying in 100ms (no state change)');
-          // 재시도 - 상태 변경 없이
-          if (isMounted) {
-            setTimeout(() => initializeAuth(), 100);
-          }
-          return; // AbortError는 상태 변경하지 않고 종료
-        }
-
-        // 실제 오류인 경우에만 상태 초기화
-        logger.error('[AuthContext] ❌ Auth initialization error (non-AbortError):', error);
-        if (isMounted) {
           setState({
             user: null,
             isLoading: false,
@@ -225,81 +204,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    initializeAuth();
+    console.log('[Auth] Setting up onAuthStateChange + getSession');
+    console.log('[Auth] CONFIG:', { ADMIN_EMAILS: CONFIG.ADMIN_EMAILS, AUTO_APPROVE: CONFIG.AUTO_APPROVE_USERS });
 
-    // 인증 상태 변경 구독
+    // 1. 먼저 onAuthStateChange를 구독 (INITIAL_SESSION 포함)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        logger.log('[AuthContext] 🔔 Auth state change event:', event, 'Session:', session?.user?.email || 'none');
+        console.log(`[Auth] onAuthStateChange: event=${event}`, session?.user?.email || 'no-user');
 
-        if (!isMounted) {
-          logger.log('[AuthContext] ⏹️ Component unmounted, ignoring auth state change');
-          return;
-        }
+        if (!isMounted) return;
 
-        if (event === 'SIGNED_IN' && session?.user) {
-          logger.log('[AuthContext] 🔐 SIGNED_IN event - processing...');
-          let profile = await getProfile(session.user.id);
-
-          if (!isMounted) {
-            logger.log('[AuthContext] ⏹️ Component unmounted after getProfile in SIGNED_IN');
-            return;
-          }
-
-          if (!profile) {
-            logger.log('[AuthContext] 📝 Creating new profile for signed-in user');
-            profile = await createProfile(
-              session.user.id,
-              session.user.email || ''
-            );
-          } else {
-            // 기존 사용자의 역할 업그레이드 확인
-            const email = session.user.email || '';
-            const expectedRole = determineRole(email);
-
-            // 역할 승격이 필요한 경우 (admin > judge > user 순서)
-            const roleOrder: Record<string, number> = { user: 0, judge: 1, admin: 2 };
-            const currentRoleLevel = roleOrder[profile.role || 'user'] || 0;
-            const expectedRoleLevel = roleOrder[expectedRole];
-
-            if (expectedRoleLevel > currentRoleLevel) {
-              logger.log(`[AuthContext] ⬆️ Upgrading user to ${expectedRole}:`, email);
-              const { data: updatedProfile, error: updateError } = await supabase
-                .from('users')
-                .update({
-                  role: expectedRole,
-                  is_approved: true,
-                })
-                .eq('id', session.user.id)
-                .select()
-                .single();
-
-              if (!updateError && updatedProfile) {
-                profile = updatedProfile as User;
-                logger.log(`[AuthContext] ✅ ${expectedRole} upgrade successful`);
-              }
-            }
-          }
-
-          if (!isMounted) {
-            logger.log('[AuthContext] ⏹️ Component unmounted after createProfile in SIGNED_IN');
-            return;
-          }
-
-          logger.log('[AuthContext] ✅ Setting authenticated state from SIGNED_IN event');
-          // 실제 로그인이 되면 게스트 세션 정리
-          sessionStorage.removeItem('guest_session');
-          setState({
-            user: profile,
-            isLoading: false,
-            isAuthenticated: true,
-            isApproved: profile?.is_approved === true,
-            isAdmin: profile?.role === 'admin',
-            isJudge: profile?.role === 'judge',
-            isGuest: false,
-          });
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          await handleSession(session, event);
         } else if (event === 'SIGNED_OUT') {
-          logger.log('[AuthContext] 🚪 SIGNED_OUT event - clearing auth state');
           sessionStorage.removeItem('guest_session');
           setState({
             user: null,
@@ -310,15 +227,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isJudge: false,
             isGuest: false,
           });
-        } else {
-          logger.log('[AuthContext] ℹ️ Other auth event:', event, '- no action taken');
         }
       }
     );
 
+    // 2. fallback: 5초 후에도 isLoading이면 getSession으로 직접 확인
+    const fallbackTimer = setTimeout(async () => {
+      if (!isMounted) return;
+      // 아직 로딩 중이면 직접 세션 확인
+      console.log('[Auth] Fallback: checking session directly after 5s timeout');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        await handleSession(session, 'fallback');
+      } catch (err) {
+        console.error('[Auth] Fallback getSession failed:', err);
+        if (isMounted) {
+          setState(prev => prev.isLoading ? {
+            ...prev,
+            isLoading: false,
+          } : prev);
+        }
+      }
+    }, 5000);
+
     return () => {
-      logger.log('[AuthContext] 🧹 Cleanup: unmounting and unsubscribing');
+      console.log('[Auth] Cleanup');
       isMounted = false;
+      clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
   }, []);
