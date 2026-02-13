@@ -2,6 +2,52 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import type { Work, Database, Json } from '@/types';
 
+// ─── Supabase REST API 직접 호출 (AbortError 회피) ───
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+/**
+ * raw fetch로 works 테이블에 INSERT (Supabase JS client AbortError 우회)
+ */
+async function insertWorkViaRest(
+  userId: string,
+  title: string,
+  panels: Json,
+  accessToken: string
+): Promise<Work | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/works`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.pgrst.object+json',
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          title,
+          panels,
+        }),
+      }
+    );
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[useWorks] REST insert error:', res.status, errorText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('[useWorks] REST insert OK:', data?.id);
+    return data as Work;
+  } catch (err) {
+    console.error('[useWorks] REST insert exception:', err);
+    return null;
+  }
+}
+
 /**
  * 작품 관리 훅
  */
@@ -34,24 +80,26 @@ export function useWorks(userId: string | undefined) {
     }
   }, [userId]);
 
-  // 작품 생성
+  // 작품 생성 (raw fetch 사용 — Supabase JS client AbortError 우회)
   const createWork = useCallback(async (title: string) => {
     // userId가 없으면 세션에서 직접 가져오는 fallback
     let effectiveUserId = userId;
-    if (!effectiveUserId) {
-      console.warn('[useWorks] userId is undefined, trying session fallback...');
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+    let accessToken = '';
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!effectiveUserId) {
         effectiveUserId = session?.user?.id;
         console.log('[useWorks] Session fallback userId:', effectiveUserId);
-      } catch (err) {
-        console.error('[useWorks] Session fallback failed:', err);
       }
+      accessToken = session?.access_token || '';
+    } catch (err) {
+      console.error('[useWorks] getSession failed:', err);
     }
 
     console.log('[useWorks] createWork called, userId:', effectiveUserId, 'title:', title);
-    if (!effectiveUserId) {
-      console.error('[useWorks] createWork aborted: no userId available');
+    if (!effectiveUserId || !accessToken) {
+      console.error('[useWorks] createWork aborted: no userId or token available');
       return null;
     }
 
@@ -61,23 +109,14 @@ export function useWorks(userId: string | undefined) {
     try {
       const initialPanels: Json = [];
 
-      console.log('[useWorks] Inserting work:', { user_id: effectiveUserId, title });
-      const { data, error: createError } = await supabase
-        .from('works')
-        .insert({
-          user_id: effectiveUserId,
-          title,
-          panels: initialPanels,
-        })
-        .select()
-        .single();
+      console.log('[useWorks] Inserting work via REST:', { user_id: effectiveUserId, title });
+      const data = await insertWorkViaRest(effectiveUserId, title, initialPanels, accessToken);
 
-      if (createError) {
-        console.error('[useWorks] Supabase insert error:', createError.message, createError.code, createError.details);
-        throw createError;
+      if (!data) {
+        throw new Error('작품 생성에 실패했습니다.');
       }
 
-      console.log('[useWorks] Work created successfully:', data?.id);
+      console.log('[useWorks] Work created successfully:', data.id);
       setWorks(prev => [data, ...prev]);
       return data;
     } catch (err) {
