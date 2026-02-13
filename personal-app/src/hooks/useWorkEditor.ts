@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWorks } from '@/hooks/useWorks';
+import { useWorksManager } from '@/hooks/useWorksManager';
 import { useAIUsage, useVisualDNA } from '@/hooks/useAIUsage';
+import { generateStoryIdea } from '@/lib/aiService';
 import type { Work, VisualDNA } from '@/types';
 import { createEmptyVisualDNA } from '@/types';
 import type { PanelContent, PanelScenes, Scene } from '@/components/story';
@@ -16,7 +17,7 @@ import { EMPTY_PANELS, EMPTY_PANEL_SCENES, createEmptyScene, PANEL_LABELS } from
 export function useWorkEditor(id: string | undefined) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { getWork, updateWork, deleteWork } = useWorks(user?.id);
+  const { getWork, updateWork, deleteWork } = useWorksManager();
 
   // AI 사용량 및 비주얼 DNA
   const { usageStatus } = useAIUsage(user?.id, user?.role ?? undefined);
@@ -36,6 +37,11 @@ export function useWorkEditor(id: string | undefined) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
   const [localVisualDNA, setLocalVisualDNA] = useState<VisualDNA | null>(null);
+
+  // AI 도우미 상태
+  const [aiIdea, setAiIdea] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
 
   // 비주얼 DNA 동기화
   useEffect(() => {
@@ -193,6 +199,38 @@ export function useWorkEditor(id: string | undefined) {
   const handleTitleChange = useCallback((newTitle: string) => {
     setTitle(newTitle);
     setHasChanges(true);
+  }, []);
+
+  // AI 도우미: 스토리 아이디어 생성
+  const handleAIStoryIdea = useCallback(async () => {
+    setIsAiLoading(true);
+    setAiError(null);
+    setAiIdea(null);
+
+    try {
+      const existingContent = [
+        panels.ki && `기(시작): ${panels.ki}`,
+        panels.seung && `승(전개): ${panels.seung}`,
+        panels.jeon && `전(위기): ${panels.jeon}`,
+        panels.gyeol && `결(결말): ${panels.gyeol}`,
+      ].filter(Boolean).join('\n');
+
+      const idea = await generateStoryIdea(
+        title || '(제목 미정)',
+        undefined,
+        existingContent || undefined
+      );
+      setAiIdea(idea);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'AI 아이디어 생성에 실패했어요.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  }, [title, panels]);
+
+  // AI 아이디어 닫기
+  const dismissAiIdea = useCallback(() => {
+    setAiIdea(null);
   }, []);
 
   // 장면 확장으로 이동
@@ -386,6 +424,9 @@ ${panels.gyeol || '(작성되지 않음)'}
     hasChanges,
     localVisualDNA,
     usageStatus,
+    aiIdea,
+    isAiLoading,
+    aiError,
 
     // 핸들러
     setCurrentStep,
@@ -399,6 +440,8 @@ ${panels.gyeol || '(작성되지 않음)'}
     handleVisualDNAChange,
     handleGoToSceneExpansion,
     getCompletedStep,
+    handleAIStoryIdea,
+    dismissAiIdea,
 
     // 다운로드
     handleDownloadText,

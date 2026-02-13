@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { useWorks } from '@/hooks/useWorks';
+import { useWorksManager } from '@/hooks/useWorksManager';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -10,8 +9,7 @@ import { Link } from 'react-router-dom';
  */
 export default function CreatePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { createWork, isLoading } = useWorks(user?.id);
+  const { createWork, isLoading } = useWorksManager();
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
 

@@ -1,17 +1,17 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useWorks } from '@/hooks/useWorks';
+import { useWorksManager } from '@/hooks/useWorksManager';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingTutorial } from '@/components/onboarding';
-import { Plus, BookOpen, LogOut, Sparkles, HelpCircle, Rocket } from 'lucide-react';
+import { Plus, BookOpen, LogOut, Sparkles, HelpCircle, Rocket, Gamepad2 } from 'lucide-react';
 
 /**
  * 대시보드 (내 작품 목록)
  */
 export default function DashboardPage() {
-  const { user, isAdmin, signOut } = useAuth();
-  const { works, isLoading, fetchWorks } = useWorks(user?.id);
+  const { user, isAdmin, isGuest, signOut } = useAuth();
+  const { works, isLoading, fetchWorks } = useWorksManager();
   const { showOnboarding, completeOnboarding, skipOnboarding, triggerOnboarding } = useOnboarding();
 
   useEffect(() => {
@@ -36,6 +36,13 @@ export default function DashboardPage() {
             <span className="title-handwriting text-xl text-primary-500">스토리 웹학습지</span>
           </Link>
           <div className="flex items-center gap-2">
+            {/* 게스트 모드 배지 */}
+            {isGuest && (
+              <span className="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-1 rounded-full flex items-center gap-1">
+                <Gamepad2 className="w-3 h-3" />
+                체험 모드
+              </span>
+            )}
             {/* 도움말 버튼 */}
             <button
               onClick={triggerOnboarding}
@@ -50,27 +57,51 @@ export default function DashboardPage() {
                 관리자
               </Link>
             )}
-            <button
-              onClick={() => signOut()}
-              className="btn btn-ghost text-sm flex items-center gap-1"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:inline">로그아웃</span>
-            </button>
+            {isGuest ? (
+              <Link
+                to="/login"
+                className="btn btn-ghost text-sm flex items-center gap-1 text-primary-500 font-bold"
+              >
+                회원가입
+              </Link>
+            ) : (
+              <button
+                onClick={() => signOut()}
+                className="btn btn-ghost text-sm flex items-center gap-1"
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">로그아웃</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
+        {/* 게스트 안내 배너 */}
+        {isGuest && (
+          <div className="card mb-4 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-emerald-700">
+                <Gamepad2 className="w-4 h-4" />
+                <span>체험 모드로 이용 중이에요. 데이터는 이 기기에만 저장됩니다.</span>
+              </div>
+              <Link to="/login" className="text-emerald-600 font-bold text-sm hover:underline whitespace-nowrap ml-2">
+                회원가입 →
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* 환영 메시지 */}
         <div className="card mb-8 bg-gradient-to-r from-primary-500 to-indigo-500 text-white">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold mb-1">
-                안녕하세요, {user?.full_name || '작가'}님! 👋
+                {isGuest ? '환영합니다! 🎮' : `안녕하세요, ${user?.full_name || '작가'}님! 👋`}
               </h1>
               <p className="text-white/80">
-                오늘도 멋진 이야기를 만들어볼까요?
+                {isGuest ? '자유롭게 스토리를 만들어보세요!' : '오늘도 멋진 이야기를 만들어볼까요?'}
               </p>
             </div>
             <Link

@@ -9,6 +9,7 @@ interface AuthContextType extends AuthState {
   signInWithEmail: (email: string) => Promise<void>;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
+  signInAsGuest: () => void;
   signOut: () => Promise<void>;
   updateFullName: (fullName: string) => Promise<void>;
 }
@@ -23,6 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isApproved: false,
     isAdmin: false,
     isJudge: false,
+    isGuest: false,
   });
 
   // 인증 상태 변경 리스너
@@ -157,17 +159,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isApproved: profile?.is_approved === true,
             isAdmin: profile?.role === 'admin',
             isJudge: profile?.role === 'judge',
+            isGuest: false,
           });
         } else {
-          logger.log('[AuthContext] 🚫 No session found, setting unauthenticated state');
-          setState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-            isApproved: false,
-            isAdmin: false,
-            isJudge: false,
-          });
+          logger.log('[AuthContext] 🚫 No session found, checking guest state');
+          // 게스트 세션 복원 확인
+          const guestSession = sessionStorage.getItem('guest_session');
+          if (guestSession === 'true') {
+            logger.log('[AuthContext] 🎮 Restoring guest session');
+            setState({
+              user: {
+                id: CONFIG.GUEST_USER_ID,
+                email: CONFIG.GUEST_USER_EMAIL,
+                full_name: '체험 사용자',
+                avatar_url: null,
+                role: 'user',
+                is_approved: true,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              isLoading: false,
+              isAuthenticated: true,
+              isApproved: true,
+              isAdmin: false,
+              isJudge: false,
+              isGuest: true,
+            });
+          } else {
+            setState({
+              user: null,
+              isLoading: false,
+              isAuthenticated: false,
+              isApproved: false,
+              isAdmin: false,
+              isJudge: false,
+              isGuest: false,
+            });
+          }
         }
       } catch (error) {
         // AbortError는 무시 (React StrictMode에서 발생)
@@ -190,6 +218,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isApproved: false,
             isAdmin: false,
             isJudge: false,
+            isGuest: false,
           });
         }
       }
@@ -257,6 +286,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
 
           logger.log('[AuthContext] ✅ Setting authenticated state from SIGNED_IN event');
+          // 실제 로그인이 되면 게스트 세션 정리
+          sessionStorage.removeItem('guest_session');
           setState({
             user: profile,
             isLoading: false,
@@ -264,9 +295,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isApproved: profile?.is_approved === true,
             isAdmin: profile?.role === 'admin',
             isJudge: profile?.role === 'judge',
+            isGuest: false,
           });
         } else if (event === 'SIGNED_OUT') {
           logger.log('[AuthContext] 🚪 SIGNED_OUT event - clearing auth state');
+          sessionStorage.removeItem('guest_session');
           setState({
             user: null,
             isLoading: false,
@@ -274,6 +307,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isApproved: false,
             isAdmin: false,
             isJudge: false,
+            isGuest: false,
           });
         } else {
           logger.log('[AuthContext] ℹ️ Other auth event:', event, '- no action taken');
@@ -347,14 +381,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // 게스트 로그인
+  const signInAsGuest = useCallback(() => {
+    logger.log('[AuthContext] 🎮 Signing in as guest');
+    sessionStorage.setItem('guest_session', 'true');
+    setState({
+      user: {
+        id: CONFIG.GUEST_USER_ID,
+        email: CONFIG.GUEST_USER_EMAIL,
+        full_name: '체험 사용자',
+        avatar_url: null,
+        role: 'user',
+        is_approved: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      isLoading: false,
+      isAuthenticated: true,
+      isApproved: true,
+      isAdmin: false,
+      isJudge: false,
+      isGuest: true,
+    });
+  }, []);
+
   // 로그아웃
   const signOut = useCallback(async () => {
+    // 게스트인 경우 세션 스토리지만 정리
+    if (state.isGuest) {
+      logger.log('[AuthContext] 🎮 Guest sign out');
+      sessionStorage.removeItem('guest_session');
+      setState({
+        user: null,
+        isLoading: false,
+        isAuthenticated: false,
+        isApproved: false,
+        isAdmin: false,
+        isJudge: false,
+        isGuest: false,
+      });
+      return;
+    }
+
     const { error } = await supabase.auth.signOut();
     if (error) {
       logger.error('Sign out error:', error);
       throw error;
     }
-  }, []);
+  }, [state.isGuest]);
 
   // 이름 업데이트
   const updateFullName = useCallback(async (fullName: string) => {
@@ -383,6 +457,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signInWithPassword,
       signUp,
+      signInAsGuest,
       signOut,
       updateFullName,
     }}>

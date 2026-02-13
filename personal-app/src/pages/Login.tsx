@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, ArrowLeft, CheckCircle, Sparkles, BookOpen, Wand2, Lock, Eye, EyeOff } from 'lucide-react';
+import { CONFIG } from '@/lib/config';
+import { Mail, ArrowLeft, CheckCircle, Sparkles, BookOpen, Wand2, Lock, Eye, EyeOff, Gamepad2 } from 'lucide-react';
 
 type LoginMode = 'select' | 'password' | 'magic-link' | 'signup';
 
@@ -9,7 +10,7 @@ type LoginMode = 'select' | 'password' | 'magic-link' | 'signup';
  * 로그인 페이지 - 초등학생 친화적 UI
  */
 export default function LoginPage() {
-  const { isAuthenticated, isApproved, signInWithGoogle, signInWithEmail, signInWithPassword, signUp } = useAuth();
+  const { isAuthenticated, isApproved, signInWithGoogle, signInWithEmail, signInWithPassword, signUp, signInAsGuest } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -386,6 +387,27 @@ export default function LoginPage() {
                 </button>
               </p>
             </div>
+
+            {/* 게스트 체험 버튼 */}
+            {CONFIG.ENABLE_GUEST_MODE && (
+              <>
+                <div className="flex items-center gap-4 my-5">
+                  <div className="flex-1 h-px bg-gray-200" />
+                  <span className="text-gray-400 text-sm">또는</span>
+                  <div className="flex-1 h-px bg-gray-200" />
+                </div>
+                <button
+                  onClick={signInAsGuest}
+                  className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-200 rounded-xl hover:border-emerald-400 hover:from-emerald-100 hover:to-teal-100 transition-all"
+                >
+                  <Gamepad2 className="w-5 h-5 text-emerald-600" />
+                  <span className="font-bold text-emerald-700">로그인 없이 체험하기</span>
+                </button>
+                <p className="text-xs text-gray-400 text-center mt-2">
+                  회원가입 없이 바로 사용해볼 수 있어요! (데이터는 이 기기에만 저장됩니다)
+                </p>
+              </>
+            )}
           </>
         )}
 

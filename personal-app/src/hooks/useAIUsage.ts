@@ -1,16 +1,22 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { AIUsageStatus, VisualDNA } from '@/types';
+import { checkAIServiceStatus } from '@/lib/aiService';
+
+const DAILY_LIMIT = 30;
 
 /**
  * AI 사용량 관리 훅
- * 로컬 스토리지 기반 일일 사용량 추적
- * admin/judge 역할은 무제한 사용 가능
+ *
+ * 우선순위:
+ * 1. admin/judge 역할 → 무제한
+ * 2. 서버 프록시 가용 (GEMINI_API_KEY on Vercel) → 무제한
+ * 3. 로컬 스토리지 기반 일일 사용량 추적
  */
 export function useAIUsage(userId: string | undefined, userRole?: string) {
   const [usageStatus, setUsageStatus] = useState<AIUsageStatus>({
     usedCount: 0,
-    dailyLimit: 5,
-    remaining: 5,
+    dailyLimit: DAILY_LIMIT,
+    remaining: DAILY_LIMIT,
     isUnlimited: false
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -24,8 +30,8 @@ export function useAIUsage(userId: string | undefined, userRole?: string) {
     setError(null);
 
     try {
+      // admin/judge 역할은 무제한
       const isPrivileged = userRole === 'admin' || userRole === 'judge';
-
       if (isPrivileged) {
         setUsageStatus({
           usedCount: 0,
@@ -36,17 +42,32 @@ export function useAIUsage(userId: string | undefined, userRole?: string) {
         return;
       }
 
+      // 서버 프록시 사용 가능 여부 확인
+      try {
+        const serverAvailable = await checkAIServiceStatus();
+        if (serverAvailable) {
+          setUsageStatus({
+            usedCount: 0,
+            dailyLimit: 0,
+            remaining: 0,
+            isUnlimited: true
+          });
+          return;
+        }
+      } catch {
+        // 서버 프록시 불가 → 일일 제한 모드로 진행
+      }
+
+      // 로컬 스토리지 기반 사용량 추적
       const today = new Date().toISOString().split('T')[0];
       const usageKey = `ai_usage_${userId}_${today}`;
       const savedUsage = localStorage.getItem(usageKey);
       const usedCount = savedUsage ? parseInt(savedUsage, 10) : 0;
 
-      const dailyLimit = 5;
-
       setUsageStatus({
         usedCount,
-        dailyLimit,
-        remaining: Math.max(dailyLimit - usedCount, 0),
+        dailyLimit: DAILY_LIMIT,
+        remaining: Math.max(DAILY_LIMIT - usedCount, 0),
         isUnlimited: false
       });
     } catch (err) {
@@ -72,15 +93,14 @@ export function useAIUsage(userId: string | undefined, userRole?: string) {
     const currentCount = savedUsage ? parseInt(savedUsage, 10) : 0;
     const newCount = currentCount + 1;
 
-    const dailyLimit = 5;
-    const canUse = newCount <= dailyLimit;
+    const canUse = newCount <= DAILY_LIMIT;
 
     if (canUse) {
       localStorage.setItem(usageKey, newCount.toString());
       setUsageStatus({
         usedCount: newCount,
-        dailyLimit,
-        remaining: Math.max(dailyLimit - newCount, 0),
+        dailyLimit: DAILY_LIMIT,
+        remaining: Math.max(DAILY_LIMIT - newCount, 0),
         isUnlimited: false
       });
     }

@@ -8,6 +8,14 @@ export const CONFIG = {
   // AI 기능 활성화 여부
   ENABLE_AI_FEATURES: import.meta.env.VITE_ENABLE_AI_FEATURES === 'true',
 
+  // 게스트 모드 활성화 여부 (로그인 없이 체험)
+  ENABLE_GUEST_MODE: import.meta.env.VITE_ENABLE_GUEST_MODE !== 'false', // 기본값 true
+
+  // 게스트 사용자 상수
+  GUEST_USER_ID: 'guest-user',
+  GUEST_USER_EMAIL: 'guest@story-maker.app',
+  GUEST_STORAGE_KEY: 'guest_works',
+
   // 관리자 이메일 목록 (자동 승인 + 관리자 권한 부여)
   ADMIN_EMAILS: (import.meta.env.VITE_ADMIN_EMAILS || '')
     .split(',')

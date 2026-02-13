@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson, Loader2, X } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 import { useWorkEditor } from '@/hooks/useWorkEditor';
 import {
@@ -138,12 +138,58 @@ export default function WorkEditPage() {
               </div>
             )}
 
+            {/* AI 도우미 */}
             {CONFIG.ENABLE_AI_FEATURES && (
               <div className="card mb-6">
-                <button className="w-full btn btn-outline flex items-center justify-center gap-2 py-3">
-                  <Wand2 className="w-5 h-5" />
-                  AI 도우미로 스토리 아이디어 얻기
+                <button
+                  onClick={editor.handleAIStoryIdea}
+                  disabled={editor.isAiLoading}
+                  className="w-full btn btn-outline flex items-center justify-center gap-2 py-3 disabled:opacity-50"
+                >
+                  {editor.isAiLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      AI가 아이디어를 생각하는 중...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 className="w-5 h-5" />
+                      AI 도우미로 스토리 아이디어 얻기
+                    </>
+                  )}
                 </button>
+
+                {/* AI 에러 메시지 */}
+                {editor.aiError && (
+                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+                    <span className="shrink-0">⚠️</span>
+                    <span>{editor.aiError}</span>
+                  </div>
+                )}
+
+                {/* AI 아이디어 결과 */}
+                {editor.aiIdea && (
+                  <div className="mt-3 bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-bold text-purple-800 flex items-center gap-2">
+                        <Wand2 className="w-4 h-4" />
+                        AI 도우미의 아이디어
+                      </h4>
+                      <button
+                        onClick={editor.dismissAiIdea}
+                        className="p-1 hover:bg-purple-100 rounded"
+                      >
+                        <X className="w-4 h-4 text-gray-400" />
+                      </button>
+                    </div>
+                    <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
+                      {editor.aiIdea}
+                    </div>
+                    <p className="mt-3 text-xs text-purple-600">
+                      💡 위 아이디어를 참고해서 나만의 스토리를 완성해보세요!
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </>

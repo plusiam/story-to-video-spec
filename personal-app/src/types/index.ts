@@ -35,4 +35,5 @@ export interface AuthState {
   isApproved: boolean;
   isAdmin: boolean;
   isJudge: boolean;
+  isGuest: boolean;
 }

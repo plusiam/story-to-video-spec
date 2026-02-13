@@ -1,12 +1,19 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, Sparkles, ArrowRight } from 'lucide-react';
+import { CONFIG } from '@/lib/config';
+import { BookOpen, Sparkles, ArrowRight, Gamepad2 } from 'lucide-react';
 
 /**
  * 홈페이지 (랜딩)
  */
 export default function HomePage() {
-  const { isAuthenticated, isApproved, user } = useAuth();
+  const { isAuthenticated, isApproved, isGuest, user, signInAsGuest } = useAuth();
+  const navigate = useNavigate();
+
+  const handleGuestStart = () => {
+    signInAsGuest();
+    navigate('/dashboard');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -42,18 +49,29 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 btn btn-primary text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
             >
               <BookOpen className="w-5 h-5" />
-              내 작품 보기
+              {isGuest ? '체험 이어하기' : '내 작품 보기'}
               <ArrowRight className="w-5 h-5" />
             </Link>
           ) : (
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 btn btn-primary text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
-            >
-              <Sparkles className="w-5 h-5" />
-              시작하기
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+            <div className="flex flex-col items-center gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center gap-2 btn btn-primary text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-xl transition-all"
+              >
+                <Sparkles className="w-5 h-5" />
+                시작하기
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              {CONFIG.ENABLE_GUEST_MODE && (
+                <button
+                  onClick={handleGuestStart}
+                  className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium transition-colors"
+                >
+                  <Gamepad2 className="w-4 h-4" />
+                  로그인 없이 체험하기
+                </button>
+              )}
+            </div>
           )}
         </div>
 
