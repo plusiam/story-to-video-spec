@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, useCallback, ReactNode 
 import { supabase } from '@/lib/supabase';
 import { CONFIG } from '@/lib/config';
 import { logger } from '@/lib/logger';
+import { injectSampleDataIfNeeded, resetSampleDataFlag } from '@/lib/sampleData';
 import type { User, AuthState } from '@/types';
 
 interface AuthContextType extends AuthState {
@@ -385,6 +386,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInAsGuest = useCallback(() => {
     logger.log('[AuthContext] 🎮 Signing in as guest');
     sessionStorage.setItem('guest_session', 'true');
+    injectSampleDataIfNeeded();
     setState({
       user: {
         id: CONFIG.GUEST_USER_ID,
@@ -411,6 +413,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (state.isGuest) {
       logger.log('[AuthContext] 🎮 Guest sign out');
       sessionStorage.removeItem('guest_session');
+      resetSampleDataFlag();
       setState({
         user: null,
         isLoading: false,
