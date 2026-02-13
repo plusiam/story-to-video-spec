@@ -37,12 +37,12 @@ export default function AdminDashboardPage() {
       const { count: pendingUsers } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'pending');
+        .eq('is_approved', false);
 
       const { count: approvedUsers } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'approved');
+        .eq('is_approved', true);
 
       // 작품 통계
       const { count: totalWorks } = await supabase

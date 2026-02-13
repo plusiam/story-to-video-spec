@@ -7,25 +7,20 @@
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   email text unique not null,
-  nickname text,
+  full_name text,
   avatar_url text,
-  provider text default 'email',
 
   -- 승인 시스템
-  status text default 'approved' check (status in ('pending', 'approved', 'rejected', 'suspended')),
-  -- MVP: 'approved' (자동승인)
-  -- Production: 'pending' (승인대기)
-
-  approved_at timestamptz,
-  approved_by uuid references public.users(id),
-  rejection_reason text,
+  is_approved boolean default true,
+  -- MVP: true (자동승인)
+  -- Production: false (승인대기)
 
   -- 역할
-  role text default 'user' check (role in ('user', 'admin')),
+  role text default 'user' check (role in ('user', 'judge', 'admin')),
 
   -- 메타
   created_at timestamptz default now() not null,
-  last_login_at timestamptz
+  updated_at timestamptz default now()
 );
 
 -- 작품 테이블
@@ -33,11 +28,10 @@ create table if not exists public.works (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references public.users(id) on delete cascade not null,
   title text default '제목 없음',
-  step int default 1 check (step >= 1 and step <= 3),
+  theme text,
+  characters text[],
   panels jsonb default '[]',
-  ai_generated jsonb,  -- AI 생성 데이터 (이미지 URL 등)
-  is_public boolean default false,
-  status text default 'draft' check (status in ('draft', 'complete')),
+  notes text,
   created_at timestamptz default now() not null,
   updated_at timestamptz default now() not null
 );
@@ -56,7 +50,7 @@ create table if not exists public.approval_logs (
 -- 인덱스
 -- ============================================
 
-create index if not exists idx_users_status on public.users(status);
+create index if not exists idx_users_is_approved on public.users(is_approved);
 create index if not exists idx_users_email on public.users(email);
 create index if not exists idx_works_user_id on public.works(user_id);
 create index if not exists idx_works_updated_at on public.works(updated_at desc);
@@ -102,6 +96,11 @@ create policy "Admins can update user status"
     )
   );
 
+-- 인증된 사용자는 프로필 생성 가능 (AuthContext.createProfile용)
+create policy "Authenticated users can insert own profile"
+  on public.users for insert
+  with check (auth.uid() = id);
+
 -- Works 정책
 -- 승인된 사용자만 작품 조회
 create policy "Approved users can view own works"
@@ -110,7 +109,7 @@ create policy "Approved users can view own works"
     user_id = auth.uid() and
     exists (
       select 1 from public.users
-      where id = auth.uid() and status = 'approved'
+      where id = auth.uid() and is_approved = true
     )
   );
 
@@ -121,7 +120,7 @@ create policy "Approved users can create works"
     user_id = auth.uid() and
     exists (
       select 1 from public.users
-      where id = auth.uid() and status = 'approved'
+      where id = auth.uid() and is_approved = true
     )
   );
 
@@ -179,27 +178,8 @@ create trigger update_works_updated_at
   for each row
   execute function update_updated_at_column();
 
--- 신규 사용자 생성 시 auth.users와 연동
-create or replace function handle_new_user()
-returns trigger as $$
-begin
-  insert into public.users (id, email, provider, status, approved_at)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_app_meta_data->>'provider', 'email'),
-    'approved',  -- MVP: 자동 승인
-    now()
-  );
-  return new;
-end;
-$$ language plpgsql security definer;
-
--- Auth 트리거 (신규 사용자 자동 등록)
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row
-  execute function handle_new_user();
+-- NOTE: 신규 사용자 프로필 생성은 AuthContext.createProfile()에서 처리
+-- handle_new_user 트리거는 사용하지 않음 (역할 결정 로직이 프론트엔드에 있으므로)
 
 -- ============================================
 -- 초기 데이터 (개발용)
