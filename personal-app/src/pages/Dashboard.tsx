@@ -52,6 +52,17 @@ export default function DashboardPage() {
               <HelpCircle className="w-4 h-4" />
               <span className="hidden sm:inline">도움말</span>
             </button>
+            {/* AI 도우미 (Gemini Gem) */}
+            <a
+              href="https://gemini.google.com/gem/1XQjHdIgC33hBM5BqVFbBbxE0PeqbHYGB?usp=sharing"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-ghost text-sm flex items-center gap-1"
+              title="Gemini AI 도우미 열기"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span className="hidden sm:inline">AI 도우미</span>
+            </a>
             {isAdmin && (
               <Link to="/admin" className="btn btn-ghost text-sm">
                 관리자
