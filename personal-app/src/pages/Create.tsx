@@ -12,9 +12,17 @@ export default function CreatePage() {
   const { createWork, isLoading } = useWorksManager();
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 중복 제출 방지
+    if (isSubmitting) {
+      console.log('[Create] Already submitting, ignoring');
+      return;
+    }
+
     setError('');
 
     if (!title.trim()) {
@@ -22,17 +30,23 @@ export default function CreatePage() {
       return;
     }
 
+    setIsSubmitting(true);
     console.log('[Create] Submitting work:', title.trim());
     try {
       const work = await createWork(title.trim());
       console.log('[Create] createWork result:', work);
       if (work) {
-        navigate(`/work/${work.id}`);
+        console.log('[Create] Navigating to /work/' + work.id);
+        // replace: true로 뒤로가기 시 Create로 돌아오지 않도록
+        navigate(`/work/${work.id}`, { replace: true });
+        // 성공 시 isSubmitting을 리셋하지 않음 (navigate 후 언마운트됨)
       } else {
+        setIsSubmitting(false);
         setError('작품 생성에 실패했습니다. 다시 시도해주세요.');
       }
     } catch (err) {
       console.error('[Create] Unexpected error:', err);
+      setIsSubmitting(false);
       setError('작품 생성 중 오류가 발생했습니다.');
     }
   };
@@ -120,10 +134,10 @@ export default function CreatePage() {
             {/* 버튼 */}
             <button
               type="submit"
-              disabled={isLoading || !title.trim()}
+              disabled={isSubmitting || isLoading || !title.trim()}
               className="w-full btn btn-primary py-4 text-lg flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              {isLoading ? (
+              {isSubmitting || isLoading ? (
                 '생성 중...'
               ) : (
                 <>

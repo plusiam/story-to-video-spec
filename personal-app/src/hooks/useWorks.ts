@@ -7,6 +7,76 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 /**
+ * raw fetch 헤더 생성 유틸리티
+ */
+function restHeaders(accessToken: string): Record<string, string> {
+  return {
+    'apikey': SUPABASE_ANON_KEY,
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json',
+  };
+}
+
+/**
+ * raw fetch로 works 테이블에서 SELECT (목록 조회)
+ */
+async function fetchWorksViaRest(
+  userId: string,
+  accessToken: string
+): Promise<Work[] | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/works?user_id=eq.${userId}&select=*&order=updated_at.desc`,
+      {
+        headers: restHeaders(accessToken),
+      }
+    );
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[useWorks] REST fetchWorks error:', res.status, errorText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('[useWorks] REST fetchWorks OK:', data?.length, 'works');
+    return data as Work[];
+  } catch (err) {
+    console.error('[useWorks] REST fetchWorks exception:', err);
+    return null;
+  }
+}
+
+/**
+ * raw fetch로 works 테이블에서 단일 SELECT (단일 조회)
+ */
+async function getWorkViaRest(
+  workId: string,
+  accessToken: string
+): Promise<Work | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/works?id=eq.${workId}&select=*`,
+      {
+        headers: {
+          ...restHeaders(accessToken),
+          'Accept': 'application/vnd.pgrst.object+json', // single object
+        },
+      }
+    );
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('[useWorks] REST getWork error:', res.status, errorText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('[useWorks] REST getWork OK:', data?.id);
+    return data as Work;
+  } catch (err) {
+    console.error('[useWorks] REST getWork exception:', err);
+    return null;
+  }
+}
+
+/**
  * raw fetch로 works 테이블에 INSERT (Supabase JS client AbortError 우회)
  */
 async function insertWorkViaRest(
@@ -21,9 +91,7 @@ async function insertWorkViaRest(
       {
         method: 'POST',
         headers: {
-          'apikey': SUPABASE_ANON_KEY,
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+          ...restHeaders(accessToken),
           'Accept': 'application/vnd.pgrst.object+json',
           'Prefer': 'return=representation',
         },
@@ -58,32 +126,49 @@ export function useWorks(userId: string | undefined, authAccessToken: string | n
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 모든 작품 조회
+  // 모든 작품 조회 (raw fetch 사용 — AbortError 완전 우회)
   const fetchWorks = useCallback(async () => {
     if (!userId) return;
+
+    // accessToken 없으면 Supabase JS client 사용 (폴백)
+    if (!authAccessToken) {
+      console.log('[useWorks] fetchWorks: no token, trying Supabase client');
+      setIsLoading(true);
+      setError(null);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('works')
+          .select('*')
+          .eq('user_id', userId)
+          .order('updated_at', { ascending: false });
+        if (fetchError) throw fetchError;
+        setWorks(data || []);
+      } catch (err) {
+        console.error('[useWorks] fetchWorks Supabase client error:', err);
+        setError(err instanceof Error ? err.message : '작품을 불러오는데 실패했습니다.');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('works')
-        .select('*')
-        .eq('user_id', userId)
-        .order('updated_at', { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      setWorks(data || []);
+      const data = await fetchWorksViaRest(userId, authAccessToken);
+      if (data === null) {
+        throw new Error('작품 목록을 불러오는데 실패했습니다.');
+      }
+      setWorks(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : '작품을 불러오는데 실패했습니다.');
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, authAccessToken]);
 
   // 작품 생성 (raw fetch 사용 — Supabase JS client AbortError 완전 우회)
-  // accessToken은 AuthContext의 onAuthStateChange에서 받은 것을 직접 사용
   const createWork = useCallback(async (title: string) => {
     console.log('[useWorks] createWork called, userId:', userId, 'title:', title, 'hasToken:', !!authAccessToken);
 
@@ -172,23 +257,37 @@ export function useWorks(userId: string | undefined, authAccessToken: string | n
     }
   }, []);
 
-  // 단일 작품 조회
+  // 단일 작품 조회 (raw fetch 사용 — AbortError 완전 우회)
   const getWork = useCallback(async (workId: string) => {
+    // accessToken 없으면 Supabase JS client 사용 (폴백)
+    if (!authAccessToken) {
+      console.log('[useWorks] getWork: no token, trying Supabase client');
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('works')
+          .select('*')
+          .eq('id', workId)
+          .single();
+        if (fetchError) throw fetchError;
+        return data;
+      } catch (err) {
+        console.error('[useWorks] getWork Supabase client error:', err);
+        setError(err instanceof Error ? err.message : '작품을 찾을 수 없습니다.');
+        return null;
+      }
+    }
+
     try {
-      const { data, error: fetchError } = await supabase
-        .from('works')
-        .select('*')
-        .eq('id', workId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
+      const data = await getWorkViaRest(workId, authAccessToken);
+      if (!data) {
+        setError('작품을 찾을 수 없습니다.');
+      }
       return data;
     } catch (err) {
       setError(err instanceof Error ? err.message : '작품을 찾을 수 없습니다.');
       return null;
     }
-  }, []);
+  }, [authAccessToken]);
 
   return {
     works,
