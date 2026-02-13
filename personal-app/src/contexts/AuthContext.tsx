@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { CONFIG } from '@/lib/config';
 import { logger } from '@/lib/logger';
 import { injectSampleDataIfNeeded, resetSampleDataFlag } from '@/lib/sampleData';
+import { setAIServiceUser } from '@/lib/aiService';
 import type { User, AuthState } from '@/types';
 
 interface AuthContextType extends AuthState {
@@ -322,6 +323,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       subscription.unsubscribe();
     };
   }, []);
+
+  // AI 서비스에 사용자 정보 동기화
+  useEffect(() => {
+    if (state.user) {
+      const role = state.isGuest ? 'guest' : (state.user.role || 'user');
+      setAIServiceUser(state.user.id, role);
+    } else {
+      setAIServiceUser(undefined, undefined);
+    }
+  }, [state.user, state.isGuest]);
 
   // Google 로그인
   const signInWithGoogle = useCallback(async () => {

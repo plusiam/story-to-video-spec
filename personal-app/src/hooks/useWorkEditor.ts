@@ -20,7 +20,7 @@ export function useWorkEditor(id: string | undefined) {
   const { getWork, updateWork, deleteWork } = useWorksManager();
 
   // AI 사용량 및 비주얼 DNA
-  const { usageStatus } = useAIUsage(user?.id, user?.role ?? undefined);
+  const { usageStatus, canUseAI, incrementUsage, syncFromServer } = useAIUsage(user?.id, user?.role ?? undefined);
   const {
     visualDNA,
     saveVisualDNA,
@@ -203,6 +203,19 @@ export function useWorkEditor(id: string | undefined) {
 
   // AI 도우미: 스토리 아이디어 생성
   const handleAIStoryIdea = useCallback(async () => {
+    // 사용량 사전 체크
+    if (!canUseAI) {
+      setAiError('오늘 AI 사용 횟수를 모두 사용했어요. 내일 다시 시도해주세요! 🌙');
+      return;
+    }
+
+    // 클라이언트 사용량 증가 (UX용 사전 체크)
+    const allowed = await incrementUsage();
+    if (!allowed) {
+      setAiError('오늘 AI 사용 횟수를 모두 사용했어요. 내일 다시 시도해주세요! 🌙');
+      return;
+    }
+
     setIsAiLoading(true);
     setAiError(null);
     setAiIdea(null);
@@ -215,18 +228,23 @@ export function useWorkEditor(id: string | undefined) {
         panels.gyeol && `결(결말): ${panels.gyeol}`,
       ].filter(Boolean).join('\n');
 
-      const idea = await generateStoryIdea(
+      const result = await generateStoryIdea(
         title || '(제목 미정)',
         undefined,
         existingContent || undefined
       );
-      setAiIdea(idea);
+      setAiIdea(result.content);
+
+      // 서버 응답의 remaining으로 클라이언트 동기화
+      if (result.remaining !== undefined) {
+        syncFromServer(result.remaining);
+      }
     } catch (err) {
       setAiError(err instanceof Error ? err.message : 'AI 아이디어 생성에 실패했어요.');
     } finally {
       setIsAiLoading(false);
     }
-  }, [title, panels]);
+  }, [title, panels, canUseAI, incrementUsage, syncFromServer]);
 
   // AI 아이디어 닫기
   const dismissAiIdea = useCallback(() => {
