@@ -257,25 +257,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // fallback: 5초 후에도 isLoading이면 getSession으로 직접 확인
+    // fallback: 3초 후에도 isLoading이면 직접 세션 확인
+    // supabase.auth.getSession()도 AbortError가 날 수 있으므로 재시도 로직 포함
     const fallbackTimer = setTimeout(async () => {
       if (!mountedRef.current) return;
-      console.log('[Auth] Fallback: checking session after 5s');
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
+      console.log('[Auth] Fallback: checking session after 3s');
+
+      for (let attempt = 0; attempt < 3; attempt++) {
         if (!mountedRef.current) return;
-        if (session?.user) {
-          await handleSession(session.user.id, session.user.email || '', session.access_token, 'fallback');
-        } else {
-          setNoSession();
-        }
-      } catch (err) {
-        console.error('[Auth] Fallback failed:', err);
-        if (mountedRef.current) {
-          setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
+        try {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) {
+            console.error(`[Auth] Fallback getSession error (attempt ${attempt}):`, error.message);
+            if (attempt < 2) {
+              await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+              continue;
+            }
+          }
+          if (!mountedRef.current) return;
+          if (session?.user) {
+            await handleSession(session.user.id, session.user.email || '', session.access_token, 'fallback');
+          } else {
+            setNoSession();
+          }
+          return; // 성공하면 종료
+        } catch (err) {
+          console.error(`[Auth] Fallback exception (attempt ${attempt}):`, err);
+          if (attempt < 2) {
+            await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+            continue;
+          }
         }
       }
-    }, 5000);
+
+      // 모든 시도 실패 → 로딩 해제
+      console.error('[Auth] Fallback: all attempts failed, clearing loading state');
+      if (mountedRef.current) {
+        setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
+      }
+    }, 3000);
 
     return () => {
       console.log('[Auth] Cleanup');
