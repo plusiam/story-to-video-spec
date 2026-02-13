@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // 사용자 프로필 조회 (내부 함수) - 재시도 포함
     const getProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
-      logger.log('[AuthContext] 📊 Fetching profile for user:', userId, retryCount > 0 ? `(retry ${retryCount})` : '');
+      console.log('[Auth] getProfile:', userId, retryCount > 0 ? `retry=${retryCount}` : '');
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -44,16 +44,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        logger.error('[AuthContext] ❌ Failed to fetch user profile:', error);
+        console.error('[Auth] getProfile FAILED:', error.code, error.message, error.details, error.hint);
         // RLS 또는 세션 전파 지연으로 인한 실패 시 재시도
-        if (retryCount < 2) {
-          logger.log('[AuthContext] 🔄 Retrying profile fetch after delay...');
-          await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+        if (retryCount < 3) {
+          console.log('[Auth] getProfile retrying in', 800 * (retryCount + 1), 'ms...');
+          await new Promise(resolve => setTimeout(resolve, 800 * (retryCount + 1)));
           return getProfile(userId, retryCount + 1);
         }
         return null;
       }
-      logger.log('[AuthContext] ✅ Profile fetched successfully:', data);
+      console.log('[Auth] getProfile OK:', data?.email, 'approved=', data?.is_approved, 'role=', data?.role);
       return data as User;
     };
 
@@ -82,12 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const isPrivileged = role === 'admin' || role === 'judge';
       const shouldAutoApprove = CONFIG.AUTO_APPROVE_USERS || isPrivileged;
 
-      logger.log('[AuthContext] 🆕 Creating new profile:', {
-        userId,
-        email,
-        role,
-        shouldAutoApprove
-      });
+      console.log('[Auth] createProfile:', email, 'role=', role, 'approve=', shouldAutoApprove);
 
       const { data, error } = await supabase
         .from('users')
@@ -101,76 +96,61 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .single();
 
       if (error) {
-        logger.error('[AuthContext] ❌ Failed to create user profile:', error);
-        // 이미 존재하는 사용자인 경우 (unique constraint 위반) → 다시 조회
-        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('already exists')) {
-          logger.log('[AuthContext] 🔄 User already exists, re-fetching profile...');
-          const { data: existingProfile } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-          if (existingProfile) {
-            logger.log('[AuthContext] ✅ Existing profile retrieved:', existingProfile);
-            return existingProfile as User;
-          }
+        console.error('[Auth] createProfile FAILED:', error.code, error.message);
+        // 이미 존재하는 사용자인 경우 → 다시 조회 (모든 에러 코드에서 시도)
+        console.log('[Auth] createProfile fallback: re-fetching existing profile...');
+        const { data: existingProfile, error: fetchError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        if (existingProfile) {
+          console.log('[Auth] createProfile fallback OK:', existingProfile.email, 'approved=', existingProfile.is_approved);
+          return existingProfile as User;
         }
+        console.error('[Auth] createProfile fallback ALSO FAILED:', fetchError?.code, fetchError?.message);
         return null;
       }
-      logger.log('[AuthContext] ✅ Profile created successfully:', data);
-      if (role === 'admin') {
-        logger.log('[AuthContext] 👑 Admin privileges granted to:', email);
-      } else if (role === 'judge') {
-        logger.log('[AuthContext] ⚖️ Judge privileges granted to:', email);
-      }
+      console.log('[Auth] createProfile OK:', data?.email, 'role=', data?.role);
       return data as User;
     };
 
     // 현재 세션 확인
     const initializeAuth = async () => {
-      logger.log('[AuthContext] 🚀 Starting auth initialization');
+      console.log('[Auth] initializeAuth START');
+      console.log('[Auth] CONFIG:', { ADMIN_EMAILS: CONFIG.ADMIN_EMAILS, AUTO_APPROVE: CONFIG.AUTO_APPROVE_USERS });
 
       try {
-        logger.log('[AuthContext] 🔍 Getting current session...');
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          logger.error('[AuthContext] ⚠️ Session error:', sessionError);
+          console.error('[Auth] Session error:', sessionError);
         }
 
-        if (!isMounted) {
-          logger.log('[AuthContext] ⏹️ Component unmounted, aborting initialization');
-          return;
-        }
+        if (!isMounted) return;
+
+        console.log('[Auth] Session:', session ? `user=${session.user.email} id=${session.user.id}` : 'NO SESSION');
 
         if (session?.user) {
-          logger.log('[AuthContext] 👤 Session found for user:', session.user.email);
           let profile = await getProfile(session.user.id);
 
-          if (!isMounted) {
-            logger.log('[AuthContext] ⏹️ Component unmounted after getProfile');
-            return;
-          }
+          if (!isMounted) return;
 
           // 프로필이 없으면 생성
           if (!profile) {
-            logger.log('[AuthContext] 📝 Profile not found, creating new profile');
+            console.log('[Auth] No profile found, creating...');
             profile = await createProfile(
               session.user.id,
               session.user.email || ''
             );
           }
 
-          if (!isMounted) {
-            logger.log('[AuthContext] ⏹️ Component unmounted after createProfile');
-            return;
-          }
+          if (!isMounted) return;
 
-          logger.log('[AuthContext] ✅ Setting authenticated state:', {
-            profile,
+          console.log('[Auth] FINAL STATE:', {
+            profile: profile ? `${profile.email} approved=${profile.is_approved} role=${profile.role}` : 'NULL',
             isApproved: profile?.is_approved === true,
             isAdmin: profile?.role === 'admin',
-            isJudge: profile?.role === 'judge'
           });
 
           setState({
