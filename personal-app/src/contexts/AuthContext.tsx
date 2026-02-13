@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { CONFIG } from '@/lib/config';
 import { logger } from '@/lib/logger';
@@ -18,6 +18,65 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+// ─── Supabase REST API를 직접 fetch로 호출 (AbortError 회피) ───
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+async function fetchProfile(userId: string, accessToken: string): Promise<User | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users?id=eq.${userId}&select=*`,
+      {
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.pgrst.object+json', // single object
+        },
+      }
+    );
+    if (!res.ok) {
+      console.error('[Auth] fetchProfile HTTP error:', res.status, res.statusText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('[Auth] fetchProfile OK:', data?.email, 'approved=', data?.is_approved, 'role=', data?.role);
+    return data as User;
+  } catch (err) {
+    console.error('[Auth] fetchProfile exception:', err);
+    return null;
+  }
+}
+
+async function insertProfile(userId: string, email: string, role: string, isApproved: boolean, accessToken: string): Promise<User | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/users`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.pgrst.object+json',
+          'Prefer': 'return=representation',
+        },
+        body: JSON.stringify({ id: userId, email, role, is_approved: isApproved }),
+      }
+    );
+    if (!res.ok) {
+      console.error('[Auth] insertProfile HTTP error:', res.status, res.statusText);
+      return null;
+    }
+    const data = await res.json();
+    console.log('[Auth] insertProfile OK:', data?.email, 'role=', data?.role);
+    return data as User;
+  } catch (err) {
+    console.error('[Auth] insertProfile exception:', err);
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -29,193 +88,160 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isGuest: false,
   });
 
+  // ref로 마운트 상태 추적 (cleanup 후에도 비동기 작업에서 확인 가능)
+  const mountedRef = useRef(true);
+
   // 인증 상태 변경 리스너
   useEffect(() => {
-    let isMounted = true;
-    logger.log('[AuthContext] 🔄 Effect initialized');
+    mountedRef.current = true;
+    console.log('[Auth] Effect initialized');
 
-    // 사용자 프로필 조회 (내부 함수) - 재시도 포함
-    const getProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
-      console.log('[Auth] getProfile:', userId, retryCount > 0 ? `retry=${retryCount}` : '');
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('[Auth] getProfile FAILED:', error.code, error.message, error.details, error.hint);
-        // RLS 또는 세션 전파 지연으로 인한 실패 시 재시도
-        if (retryCount < 3) {
-          console.log('[Auth] getProfile retrying in', 800 * (retryCount + 1), 'ms...');
-          await new Promise(resolve => setTimeout(resolve, 800 * (retryCount + 1)));
-          return getProfile(userId, retryCount + 1);
-        }
-        return null;
-      }
-      console.log('[Auth] getProfile OK:', data?.email, 'approved=', data?.is_approved, 'role=', data?.role);
-      return data as User;
-    };
-
-    // 관리자 이메일 여부 확인 (내부 함수)
-    const isAdminEmail = (email: string): boolean => {
-      const normalizedEmail = email.toLowerCase().trim();
-      return CONFIG.ADMIN_EMAILS.includes(normalizedEmail);
-    };
-
-    // 심사위원 이메일 여부 확인 (내부 함수)
-    const isJudgeEmail = (email: string): boolean => {
-      const normalizedEmail = email.toLowerCase().trim();
-      return CONFIG.JUDGE_EMAILS.includes(normalizedEmail);
-    };
-
-    // 이메일 기반 역할 결정 (내부 함수)
+    // 이메일 기반 역할 결정
     const determineRole = (email: string): 'admin' | 'judge' | 'user' => {
-      if (isAdminEmail(email)) return 'admin';
-      if (isJudgeEmail(email)) return 'judge';
+      const normalized = email.toLowerCase().trim();
+      if (CONFIG.ADMIN_EMAILS.includes(normalized)) return 'admin';
+      if (CONFIG.JUDGE_EMAILS.includes(normalized)) return 'judge';
       return 'user';
     };
 
-    // 사용자 프로필 생성 (내부 함수)
-    const createProfile = async (userId: string, email: string) => {
+    // 프로필 조회 + 생성 (독립적 fetch 사용 — Supabase AbortError 완전 회피)
+    const loadProfile = async (userId: string, email: string, accessToken: string): Promise<User | null> => {
+      console.log('[Auth] loadProfile:', email);
+
+      // 1. 프로필 조회 (최대 3회 재시도)
+      for (let attempt = 0; attempt < 3; attempt++) {
+        if (!mountedRef.current) return null;
+
+        const profile = await fetchProfile(userId, accessToken);
+        if (profile) {
+          // 역할 업그레이드 확인
+          const expectedRole = determineRole(email);
+          const roleOrder: Record<string, number> = { user: 0, judge: 1, admin: 2 };
+          if ((roleOrder[expectedRole] || 0) > (roleOrder[profile.role || 'user'] || 0)) {
+            console.log(`[Auth] Upgrading role: ${profile.role} → ${expectedRole}`);
+            // 역할 업그레이드는 supabase 클라이언트 사용 (비동기이지만 실패해도 OK)
+            try {
+              const { data } = await supabase
+                .from('users')
+                .update({ role: expectedRole, is_approved: true })
+                .eq('id', userId)
+                .select()
+                .single();
+              if (data) return data as User;
+            } catch { /* ignore, use existing profile */ }
+          }
+          return profile;
+        }
+
+        if (attempt < 2) {
+          console.log('[Auth] loadProfile retry in', 500 * (attempt + 1), 'ms...');
+          await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+        }
+      }
+
+      // 2. 프로필 없음 → 생성 시도
+      if (!mountedRef.current) return null;
+      console.log('[Auth] No profile found, creating...');
+
       const role = determineRole(email);
       const isPrivileged = role === 'admin' || role === 'judge';
       const shouldAutoApprove = CONFIG.AUTO_APPROVE_USERS || isPrivileged;
 
-      console.log('[Auth] createProfile:', email, 'role=', role, 'approve=', shouldAutoApprove);
+      const created = await insertProfile(userId, email, role, shouldAutoApprove, accessToken);
+      if (created) return created;
 
-      const { data, error } = await supabase
-        .from('users')
-        .insert({
-          id: userId,
-          email,
-          role,
-          is_approved: shouldAutoApprove,
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('[Auth] createProfile FAILED:', error.code, error.message);
-        // 이미 존재하는 사용자인 경우 → 다시 조회 (모든 에러 코드에서 시도)
-        console.log('[Auth] createProfile fallback: re-fetching existing profile...');
-        const { data: existingProfile, error: fetchError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userId)
-          .single();
-        if (existingProfile) {
-          console.log('[Auth] createProfile fallback OK:', existingProfile.email, 'approved=', existingProfile.is_approved);
-          return existingProfile as User;
-        }
-        console.error('[Auth] createProfile fallback ALSO FAILED:', fetchError?.code, fetchError?.message);
-        return null;
-      }
-      console.log('[Auth] createProfile OK:', data?.email, 'role=', data?.role);
-      return data as User;
+      // 3. 생성 실패 (이미 존재) → 다시 조회
+      console.log('[Auth] Insert failed, re-fetching...');
+      return await fetchProfile(userId, accessToken);
     };
 
-    // 세션으로부터 인증 상태 설정하는 공통 함수
-    const handleSession = async (session: import('@supabase/supabase-js').Session | null, source: string) => {
-      console.log(`[Auth] handleSession (${source}):`, session ? `user=${session.user.email}` : 'NO SESSION');
+    // 세션으로부터 인증 상태 설정
+    const handleSession = async (userId: string, email: string, accessToken: string, source: string) => {
+      console.log(`[Auth] handleSession (${source}): user=${email}`);
 
-      if (!isMounted) return;
+      if (!mountedRef.current) return;
 
-      if (session?.user) {
-        let profile = await getProfile(session.user.id);
+      const profile = await loadProfile(userId, email, accessToken);
 
-        if (!isMounted) return;
+      if (!mountedRef.current) return;
 
-        if (!profile) {
-          console.log('[Auth] No profile, creating...');
-          profile = await createProfile(session.user.id, session.user.email || '');
-        } else {
-          // 기존 사용자의 역할 업그레이드 확인
-          const email = session.user.email || '';
-          const expectedRole = determineRole(email);
-          const roleOrder: Record<string, number> = { user: 0, judge: 1, admin: 2 };
-          const currentRoleLevel = roleOrder[profile.role || 'user'] || 0;
-          const expectedRoleLevel = roleOrder[expectedRole];
+      console.log('[Auth] FINAL STATE:', profile
+        ? `${profile.email} approved=${profile.is_approved} role=${profile.role}`
+        : 'NULL');
 
-          if (expectedRoleLevel > currentRoleLevel) {
-            console.log(`[Auth] Upgrading role: ${profile.role} → ${expectedRole}`);
-            const { data: updatedProfile, error: updateError } = await supabase
-              .from('users')
-              .update({ role: expectedRole, is_approved: true })
-              .eq('id', session.user.id)
-              .select()
-              .single();
-            if (!updateError && updatedProfile) {
-              profile = updatedProfile as User;
-            }
-          }
-        }
+      sessionStorage.removeItem('guest_session');
+      setState({
+        user: profile,
+        isLoading: false,
+        isAuthenticated: true,
+        isApproved: profile?.is_approved === true,
+        isAdmin: profile?.role === 'admin',
+        isJudge: profile?.role === 'judge',
+        isGuest: false,
+      });
+    };
 
-        if (!isMounted) return;
-
-        console.log('[Auth] FINAL STATE:', profile
-          ? `${profile.email} approved=${profile.is_approved} role=${profile.role}`
-          : 'NULL');
-
-        sessionStorage.removeItem('guest_session');
+    const setNoSession = () => {
+      const guestSession = sessionStorage.getItem('guest_session');
+      if (guestSession === 'true') {
+        console.log('[Auth] Restoring guest session');
         setState({
-          user: profile,
+          user: {
+            id: CONFIG.GUEST_USER_ID,
+            email: CONFIG.GUEST_USER_EMAIL,
+            full_name: '체험 사용자',
+            avatar_url: null,
+            role: 'user',
+            is_approved: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
           isLoading: false,
           isAuthenticated: true,
-          isApproved: profile?.is_approved === true,
-          isAdmin: profile?.role === 'admin',
-          isJudge: profile?.role === 'judge',
-          isGuest: false,
+          isApproved: true,
+          isAdmin: false,
+          isJudge: false,
+          isGuest: true,
         });
       } else {
-        // 세션 없음 — 게스트 복원 확인
-        const guestSession = sessionStorage.getItem('guest_session');
-        if (guestSession === 'true') {
-          console.log('[Auth] Restoring guest session');
-          setState({
-            user: {
-              id: CONFIG.GUEST_USER_ID,
-              email: CONFIG.GUEST_USER_EMAIL,
-              full_name: '체험 사용자',
-              avatar_url: null,
-              role: 'user',
-              is_approved: true,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-            isLoading: false,
-            isAuthenticated: true,
-            isApproved: true,
-            isAdmin: false,
-            isJudge: false,
-            isGuest: true,
-          });
-        } else {
-          setState({
-            user: null,
-            isLoading: false,
-            isAuthenticated: false,
-            isApproved: false,
-            isAdmin: false,
-            isJudge: false,
-            isGuest: false,
-          });
-        }
+        setState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+          isApproved: false,
+          isAdmin: false,
+          isJudge: false,
+          isGuest: false,
+        });
       }
     };
 
-    console.log('[Auth] Setting up onAuthStateChange + getSession');
+    console.log('[Auth] Setting up onAuthStateChange');
     console.log('[Auth] CONFIG:', { ADMIN_EMAILS: CONFIG.ADMIN_EMAILS, AUTO_APPROVE: CONFIG.AUTO_APPROVE_USERS });
 
-    // 1. 먼저 onAuthStateChange를 구독 (INITIAL_SESSION 포함)
+    // onAuthStateChange 구독 — 콜백 안에서 Supabase DB 호출하지 않음!
+    // 대신 세션 정보를 캡처하고 독립적 fetch로 프로필 조회
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         console.log(`[Auth] onAuthStateChange: event=${event}`, session?.user?.email || 'no-user');
 
-        if (!isMounted) return;
+        if (!mountedRef.current) return;
 
         if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-          await handleSession(session, event);
+          if (session?.user) {
+            // setTimeout(0)으로 분리 — onAuthStateChange 콜백의 abort signal 영향을 완전히 차단
+            setTimeout(() => {
+              if (!mountedRef.current) return;
+              handleSession(
+                session.user.id,
+                session.user.email || '',
+                session.access_token,
+                event
+              );
+            }, 0);
+          } else {
+            setNoSession();
+          }
         } else if (event === 'SIGNED_OUT') {
           sessionStorage.removeItem('guest_session');
           setState({
@@ -231,28 +257,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // 2. fallback: 5초 후에도 isLoading이면 getSession으로 직접 확인
+    // fallback: 5초 후에도 isLoading이면 getSession으로 직접 확인
     const fallbackTimer = setTimeout(async () => {
-      if (!isMounted) return;
-      // 아직 로딩 중이면 직접 세션 확인
-      console.log('[Auth] Fallback: checking session directly after 5s timeout');
+      if (!mountedRef.current) return;
+      console.log('[Auth] Fallback: checking session after 5s');
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        await handleSession(session, 'fallback');
+        if (!mountedRef.current) return;
+        if (session?.user) {
+          await handleSession(session.user.id, session.user.email || '', session.access_token, 'fallback');
+        } else {
+          setNoSession();
+        }
       } catch (err) {
-        console.error('[Auth] Fallback getSession failed:', err);
-        if (isMounted) {
-          setState(prev => prev.isLoading ? {
-            ...prev,
-            isLoading: false,
-          } : prev);
+        console.error('[Auth] Fallback failed:', err);
+        if (mountedRef.current) {
+          setState(prev => prev.isLoading ? { ...prev, isLoading: false } : prev);
         }
       }
     }, 5000);
 
     return () => {
       console.log('[Auth] Cleanup');
-      isMounted = false;
+      mountedRef.current = false;
       clearTimeout(fallbackTimer);
       subscription.unsubscribe();
     };
