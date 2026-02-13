@@ -7,9 +7,9 @@ import { useGuestWorks } from './useGuestWorks';
  * 게스트 모드일 때는 localStorage, 일반 사용자일 때는 Supabase 사용
  */
 export function useWorksManager() {
-  const { user, isGuest } = useAuth();
+  const { user, isGuest, accessToken } = useAuth();
   const userId = isGuest ? undefined : user?.id;
-  const supabaseWorks = useWorks(userId);
+  const supabaseWorks = useWorks(userId, accessToken);
   const guestWorks = useGuestWorks();
 
   // 디버그: user 상태 확인

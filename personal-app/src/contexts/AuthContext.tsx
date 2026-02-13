@@ -86,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAdmin: false,
     isJudge: false,
     isGuest: false,
+    accessToken: null,
   });
 
   // ref로 마운트 상태 추적 (cleanup 후에도 비동기 작업에서 확인 가능)
@@ -178,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: profile?.role === 'admin',
         isJudge: profile?.role === 'judge',
         isGuest: false,
+        accessToken,
       });
     };
 
@@ -202,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAdmin: false,
           isJudge: false,
           isGuest: true,
+          accessToken: null,
         });
       } else {
         setState({
@@ -212,6 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAdmin: false,
           isJudge: false,
           isGuest: false,
+          accessToken: null,
         });
       }
     };
@@ -252,6 +256,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             isAdmin: false,
             isJudge: false,
             isGuest: false,
+            accessToken: null,
           });
         }
       }
@@ -396,6 +401,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAdmin: false,
       isJudge: false,
       isGuest: true,
+      accessToken: null,
     });
   }, []);
 
@@ -414,6 +420,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAdmin: false,
         isJudge: false,
         isGuest: false,
+        accessToken: null,
       });
       return;
     }

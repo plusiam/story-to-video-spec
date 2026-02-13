@@ -50,8 +50,10 @@ async function insertWorkViaRest(
 
 /**
  * 작품 관리 훅
+ * @param userId - 사용자 ID
+ * @param authAccessToken - AuthContext에서 전달받은 access token (getSession() AbortError 회피)
  */
-export function useWorks(userId: string | undefined) {
+export function useWorks(userId: string | undefined, authAccessToken: string | null = null) {
   const [works, setWorks] = useState<Work[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,26 +82,14 @@ export function useWorks(userId: string | undefined) {
     }
   }, [userId]);
 
-  // 작품 생성 (raw fetch 사용 — Supabase JS client AbortError 우회)
+  // 작품 생성 (raw fetch 사용 — Supabase JS client AbortError 완전 우회)
+  // accessToken은 AuthContext의 onAuthStateChange에서 받은 것을 직접 사용
   const createWork = useCallback(async (title: string) => {
-    // userId가 없으면 세션에서 직접 가져오는 fallback
-    let effectiveUserId = userId;
-    let accessToken = '';
+    console.log('[useWorks] createWork called, userId:', userId, 'title:', title, 'hasToken:', !!authAccessToken);
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!effectiveUserId) {
-        effectiveUserId = session?.user?.id;
-        console.log('[useWorks] Session fallback userId:', effectiveUserId);
-      }
-      accessToken = session?.access_token || '';
-    } catch (err) {
-      console.error('[useWorks] getSession failed:', err);
-    }
-
-    console.log('[useWorks] createWork called, userId:', effectiveUserId, 'title:', title);
-    if (!effectiveUserId || !accessToken) {
+    if (!userId || !authAccessToken) {
       console.error('[useWorks] createWork aborted: no userId or token available');
+      setError('인증 정보가 없습니다. 다시 로그인해주세요.');
       return null;
     }
 
@@ -109,8 +99,8 @@ export function useWorks(userId: string | undefined) {
     try {
       const initialPanels: Json = [];
 
-      console.log('[useWorks] Inserting work via REST:', { user_id: effectiveUserId, title });
-      const data = await insertWorkViaRest(effectiveUserId, title, initialPanels, accessToken);
+      console.log('[useWorks] Inserting work via REST:', { user_id: userId, title });
+      const data = await insertWorkViaRest(userId, title, initialPanels, authAccessToken);
 
       if (!data) {
         throw new Error('작품 생성에 실패했습니다.');
@@ -127,7 +117,7 @@ export function useWorks(userId: string | undefined) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]);
+  }, [userId, authAccessToken]);
 
   // 작품 업데이트
   const updateWork = useCallback(async (workId: string, updates: Partial<Omit<Work, 'id' | 'user_id' | 'created_at'>>) => {

@@ -36,4 +36,5 @@ export interface AuthState {
   isAdmin: boolean;
   isJudge: boolean;
   isGuest: boolean;
+  accessToken: string | null;
 }
