@@ -1,18 +1,19 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useWorksManager } from '@/hooks/useWorksManager';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingTutorial } from '@/components/onboarding';
-import { Plus, BookOpen, LogOut, Sparkles, HelpCircle, Rocket, Gamepad2 } from 'lucide-react';
+import { Plus, BookOpen, LogOut, Sparkles, HelpCircle, Rocket, Gamepad2, Trash2 } from 'lucide-react';
 
 /**
  * 대시보드 (내 작품 목록)
  */
 export default function DashboardPage() {
   const { user, isAdmin, isGuest, signOut } = useAuth();
-  const { works, isLoading, fetchWorks } = useWorksManager();
+  const { works, isLoading, fetchWorks, deleteWork } = useWorksManager();
   const { showOnboarding, completeOnboarding, skipOnboarding, triggerOnboarding } = useOnboarding();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchWorks();
@@ -168,22 +169,48 @@ export default function DashboardPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
               {works.map((work) => (
-                <Link
+                <div
                   key={work.id}
-                  to={`/work/${work.id}`}
-                  className="card hover:shadow-md transition-shadow group"
+                  className="card hover:shadow-md transition-shadow group relative"
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-medium text-gray-800 group-hover:text-primary-500 transition-colors">
-                      {work.title || '제목 없음'}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs text-gray-400">
-                    <span>
-                      {work.updated_at ? new Date(work.updated_at).toLocaleDateString('ko-KR') : '-'}
-                    </span>
-                  </div>
-                </Link>
+                  <Link
+                    to={`/work/${work.id}`}
+                    className="block"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-medium text-gray-800 group-hover:text-primary-500 transition-colors pr-8">
+                        {work.title || '제목 없음'}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                      <span>
+                        {work.updated_at ? new Date(work.updated_at).toLocaleDateString('ko-KR') : '-'}
+                      </span>
+                    </div>
+                  </Link>
+                  {/* 삭제 버튼 */}
+                  <button
+                    onClick={async (e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (deletingId) return; // 이미 삭제 진행 중
+                      const confirmed = window.confirm(`"${work.title || '제목 없음'}" 작품을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`);
+                      if (!confirmed) return;
+                      setDeletingId(work.id);
+                      await deleteWork(work.id);
+                      setDeletingId(null);
+                    }}
+                    disabled={deletingId === work.id}
+                    className="absolute top-4 right-4 p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 disabled:opacity-50"
+                    title="작품 삭제"
+                  >
+                    {deletingId === work.id ? (
+                      <span className="animate-spin text-sm">⏳</span>
+                    ) : (
+                      <Trash2 className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
               ))}
 
               {/* 새 작품 카드 */}
