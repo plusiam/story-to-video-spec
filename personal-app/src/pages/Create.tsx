@@ -22,11 +22,18 @@ export default function CreatePage() {
       return;
     }
 
-    const work = await createWork(title.trim());
-    if (work) {
-      navigate(`/work/${work.id}`);
-    } else {
-      setError('작품 생성에 실패했습니다. 다시 시도해주세요.');
+    console.log('[Create] Submitting work:', title.trim());
+    try {
+      const work = await createWork(title.trim());
+      console.log('[Create] createWork result:', work);
+      if (work) {
+        navigate(`/work/${work.id}`);
+      } else {
+        setError('작품 생성에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (err) {
+      console.error('[Create] Unexpected error:', err);
+      setError('작품 생성 중 오류가 발생했습니다.');
     }
   };
 

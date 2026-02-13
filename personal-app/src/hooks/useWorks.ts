@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import type { Work, WorkData, Database, Json } from '@/types';
+import type { Work, Database, Json } from '@/types';
 
 /**
  * 작품 관리 훅
@@ -36,33 +36,54 @@ export function useWorks(userId: string | undefined) {
 
   // 작품 생성
   const createWork = useCallback(async (title: string) => {
-    if (!userId) return null;
+    // userId가 없으면 세션에서 직접 가져오는 fallback
+    let effectiveUserId = userId;
+    if (!effectiveUserId) {
+      console.warn('[useWorks] userId is undefined, trying session fallback...');
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        effectiveUserId = session?.user?.id;
+        console.log('[useWorks] Session fallback userId:', effectiveUserId);
+      } catch (err) {
+        console.error('[useWorks] Session fallback failed:', err);
+      }
+    }
+
+    console.log('[useWorks] createWork called, userId:', effectiveUserId, 'title:', title);
+    if (!effectiveUserId) {
+      console.error('[useWorks] createWork aborted: no userId available');
+      return null;
+    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      const workData: WorkData = {
-        title,
-        panels: [],
-      };
+      const initialPanels: Json = [];
 
+      console.log('[useWorks] Inserting work:', { user_id: effectiveUserId, title });
       const { data, error: createError } = await supabase
         .from('works')
         .insert({
-          user_id: userId,
+          user_id: effectiveUserId,
           title,
-          panels: workData as unknown as Json,
+          panels: initialPanels,
         })
         .select()
         .single();
 
-      if (createError) throw createError;
+      if (createError) {
+        console.error('[useWorks] Supabase insert error:', createError.message, createError.code, createError.details);
+        throw createError;
+      }
 
+      console.log('[useWorks] Work created successfully:', data?.id);
       setWorks(prev => [data, ...prev]);
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err.message : '작품 생성에 실패했습니다.');
+      const message = err instanceof Error ? err.message : '작품 생성에 실패했습니다.';
+      console.error('[useWorks] createWork exception:', err);
+      setError(message);
       return null;
     } finally {
       setIsLoading(false);

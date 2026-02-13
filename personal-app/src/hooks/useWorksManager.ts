@@ -8,8 +8,14 @@ import { useGuestWorks } from './useGuestWorks';
  */
 export function useWorksManager() {
   const { user, isGuest } = useAuth();
-  const supabaseWorks = useWorks(isGuest ? undefined : user?.id);
+  const userId = isGuest ? undefined : user?.id;
+  const supabaseWorks = useWorks(userId);
   const guestWorks = useGuestWorks();
+
+  // 디버그: user 상태 확인
+  if (!isGuest && !userId) {
+    console.warn('[useWorksManager] Not guest but userId is undefined. user:', user);
+  }
 
   if (isGuest) {
     return guestWorks;
