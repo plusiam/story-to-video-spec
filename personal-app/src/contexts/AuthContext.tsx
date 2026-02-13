@@ -34,9 +34,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let isMounted = true;
     logger.log('[AuthContext] 🔄 Effect initialized');
 
-    // 사용자 프로필 조회 (내부 함수)
-    const getProfile = async (userId: string) => {
-      logger.log('[AuthContext] 📊 Fetching profile for user:', userId);
+    // 사용자 프로필 조회 (내부 함수) - 재시도 포함
+    const getProfile = async (userId: string, retryCount = 0): Promise<User | null> => {
+      logger.log('[AuthContext] 📊 Fetching profile for user:', userId, retryCount > 0 ? `(retry ${retryCount})` : '');
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -45,6 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         logger.error('[AuthContext] ❌ Failed to fetch user profile:', error);
+        // RLS 또는 세션 전파 지연으로 인한 실패 시 재시도
+        if (retryCount < 2) {
+          logger.log('[AuthContext] 🔄 Retrying profile fetch after delay...');
+          await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1)));
+          return getProfile(userId, retryCount + 1);
+        }
         return null;
       }
       logger.log('[AuthContext] ✅ Profile fetched successfully:', data);
@@ -96,6 +102,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         logger.error('[AuthContext] ❌ Failed to create user profile:', error);
+        // 이미 존재하는 사용자인 경우 (unique constraint 위반) → 다시 조회
+        if (error.code === '23505' || error.message?.includes('duplicate') || error.message?.includes('already exists')) {
+          logger.log('[AuthContext] 🔄 User already exists, re-fetching profile...');
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+          if (existingProfile) {
+            logger.log('[AuthContext] ✅ Existing profile retrieved:', existingProfile);
+            return existingProfile as User;
+          }
+        }
         return null;
       }
       logger.log('[AuthContext] ✅ Profile created successfully:', data);
