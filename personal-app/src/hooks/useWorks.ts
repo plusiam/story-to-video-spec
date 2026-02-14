@@ -204,58 +204,99 @@ export function useWorks(userId: string | undefined, authAccessToken: string | n
     }
   }, [userId, authAccessToken]);
 
-  // 작품 업데이트
+  // 작품 업데이트 (raw REST fetch 사용 — AbortError 회피)
   const updateWork = useCallback(async (workId: string, updates: Partial<Omit<Work, 'id' | 'user_id' | 'created_at'>>) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const updateData: Database['public']['Tables']['works']['Update'] = {
+      const updateData = {
         ...updates,
         updated_at: new Date().toISOString(),
       };
 
-      const { data, error: updateError } = await supabase
-        .from('works')
-        .update(updateData)
-        .eq('id', workId)
-        .select()
-        .single();
-
-      if (updateError) throw updateError;
-
-      setWorks(prev => prev.map(w => w.id === workId ? data : w));
-      return data;
+      if (authAccessToken) {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/works?id=eq.${workId}`,
+          {
+            method: 'PATCH',
+            headers: {
+              ...restHeaders(authAccessToken),
+              'Accept': 'application/vnd.pgrst.object+json',
+              'Prefer': 'return=representation',
+            },
+            body: JSON.stringify(updateData),
+          }
+        );
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[useWorks] REST update error:', res.status, errorText);
+          throw new Error('작품 저장에 실패했습니다.');
+        }
+        const data = await res.json();
+        console.log('[useWorks] REST update OK:', data?.id);
+        setWorks(prev => prev.map(w => w.id === workId ? data : w));
+        return data;
+      } else {
+        // 폴백: Supabase JS client
+        const { data, error: updateError } = await supabase
+          .from('works')
+          .update(updateData as Database['public']['Tables']['works']['Update'])
+          .eq('id', workId)
+          .select()
+          .single();
+        if (updateError) throw updateError;
+        setWorks(prev => prev.map(w => w.id === workId ? data : w));
+        return data;
+      }
     } catch (err) {
+      console.error('[useWorks] updateWork error:', err);
       setError(err instanceof Error ? err.message : '작품 저장에 실패했습니다.');
       return null;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authAccessToken]);
 
-  // 작품 삭제
+  // 작품 삭제 (raw REST fetch 사용 — AbortError 회피)
   const deleteWork = useCallback(async (workId: string) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const { error: deleteError } = await supabase
-        .from('works')
-        .delete()
-        .eq('id', workId);
-
-      if (deleteError) throw deleteError;
+      if (authAccessToken) {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/works?id=eq.${workId}`,
+          {
+            method: 'DELETE',
+            headers: restHeaders(authAccessToken),
+          }
+        );
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error('[useWorks] REST delete error:', res.status, errorText);
+          throw new Error('작품 삭제에 실패했습니다.');
+        }
+        console.log('[useWorks] REST delete OK:', workId);
+      } else {
+        // 폴백: Supabase JS client
+        const { error: deleteError } = await supabase
+          .from('works')
+          .delete()
+          .eq('id', workId);
+        if (deleteError) throw deleteError;
+      }
 
       setWorks(prev => prev.filter(w => w.id !== workId));
       return true;
     } catch (err) {
+      console.error('[useWorks] deleteWork error:', err);
       setError(err instanceof Error ? err.message : '작품 삭제에 실패했습니다.');
       return false;
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authAccessToken]);
 
   // 단일 작품 조회 (raw fetch 사용 — AbortError 완전 우회)
   const getWork = useCallback(async (workId: string) => {
