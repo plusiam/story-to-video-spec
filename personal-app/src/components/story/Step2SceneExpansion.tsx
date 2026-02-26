@@ -57,7 +57,7 @@ export default function Step2SceneExpansion({
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h2 className="font-bold text-gray-800 text-lg sm:text-xl flex items-center gap-2">
-          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-500" />
+          <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary-500" />
           장면 확장하기
         </h2>
         <div className="text-xs sm:text-sm text-gray-500">
@@ -66,8 +66,8 @@ export default function Step2SceneExpansion({
       </div>
 
       {/* 설명 - 모바일에서 간략화 */}
-      <div className="bg-indigo-50 rounded-xl p-3 sm:p-4">
-        <p className="text-indigo-700 text-xs sm:text-sm">
+      <div className="bg-primary-50 rounded-xl p-3 sm:p-4">
+        <p className="text-primary-700 text-xs sm:text-sm">
           <strong>💡 TIP:</strong>{' '}
           <span className="hidden sm:inline">
             4컷 스토리의 각 부분을 1~3개의 상세한 장면으로 확장해보세요.
@@ -87,7 +87,7 @@ export default function Step2SceneExpansion({
       <div className="space-y-1 sm:space-y-2">
         <div className="h-1.5 sm:h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+            className="h-full bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
@@ -125,7 +125,7 @@ export default function Step2SceneExpansion({
           disabled={!canProceed}
           className={`flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 rounded-lg transition-colors text-sm sm:text-base ${
             canProceed
-              ? 'bg-indigo-500 text-white hover:bg-indigo-600'
+              ? 'bg-primary-500 text-white hover:bg-primary-600'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
