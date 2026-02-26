@@ -10,18 +10,19 @@ type LoginMode = 'select' | 'password' | 'signup';
  * 로그인 페이지 - 초등학생 친화적 UI
  */
 export default function LoginPage() {
-  const { isAuthenticated, isApproved, signInWithPassword, signUp, signInAsGuest } = useAuth();
+  const { isAuthenticated, isApproved, isGuest, signInWithPassword, signUp, signInAsGuest, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [mode, setMode] = useState<LoginMode>('select');
+  // 게스트 모드에서 오면 바로 회원가입 모드로 시작
+  const [mode, setMode] = useState<LoginMode>(isGuest ? 'signup' : 'select');
   const [isSignUpComplete, setIsSignUpComplete] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 이미 로그인된 경우
-  if (isAuthenticated) {
+  // 이미 로그인된 경우 (게스트는 회원가입을 위해 로그인 페이지 접근 허용)
+  if (isAuthenticated && !isGuest) {
     if (isApproved) {
       return <Navigate to="/dashboard" replace />;
     }
@@ -43,6 +44,8 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
     try {
+      // 게스트 세션이면 먼저 로그아웃
+      if (isGuest) await signOut();
       await signInWithPassword(email, password);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : '';
@@ -86,6 +89,8 @@ export default function LoginPage() {
     setError('');
     setIsLoading(true);
     try {
+      // 게스트 세션이면 먼저 로그아웃
+      if (isGuest) await signOut();
       await signUp(email, password);
       setIsSignUpComplete(true);
     } catch (err: unknown) {
