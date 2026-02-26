@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { CONFIG } from '@/lib/config';
-import { ArrowLeft, CheckCircle, Sparkles, BookOpen, Wand2, Lock, Eye, EyeOff, Gamepad2, Mail } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Lock, Eye, EyeOff, Gamepad2, Mail } from 'lucide-react';
 
 type LoginMode = 'select' | 'password' | 'signup';
 
@@ -176,24 +176,6 @@ export default function LoginPage() {
             {mode === 'signup' && '새로운 계정을 만들어요'}
           </p>
         </div>
-
-        {/* 특징 하이라이트 - 선택 모드에서만 */}
-        {mode === 'select' && (
-          <div className="grid grid-cols-3 gap-2 mb-6">
-            <div className="bg-blue-50 rounded-xl p-3 text-center">
-              <BookOpen className="w-6 h-6 text-blue-500 mx-auto mb-1" />
-              <p className="text-xs text-blue-700 font-medium">스토리 만들기</p>
-            </div>
-            <div className="bg-purple-50 rounded-xl p-3 text-center">
-              <Wand2 className="w-6 h-6 text-purple-500 mx-auto mb-1" />
-              <p className="text-xs text-purple-700 font-medium">AI 도움받기</p>
-            </div>
-            <div className="bg-pink-50 rounded-xl p-3 text-center">
-              <Sparkles className="w-6 h-6 text-pink-500 mx-auto mb-1" />
-              <p className="text-xs text-pink-700 font-medium">그림책 완성</p>
-            </div>
-          </div>
-        )}
 
         {/* 에러 메시지 */}
         {error && (
