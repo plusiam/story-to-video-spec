@@ -54,13 +54,6 @@ export default function WorkEditPage() {
               <Save className="w-4 h-4" />
               {editor.isSaving ? '저장 중...' : '저장'}
             </button>
-            <button
-              onClick={editor.handleDelete}
-              className="btn btn-ghost text-red-500 hover:bg-red-50"
-              title="삭제"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
           </div>
         </div>
       </header>
@@ -89,21 +82,24 @@ export default function WorkEditPage() {
             </span>
           </div>
           <div className="flex gap-2">
-            {[1, 2, 3].map((step) => (
+            {([
+              { step: 1, label: '4컷 스토리', shortLabel: '4컷' },
+              { step: 2, label: '장면 확장', shortLabel: '확장' },
+              { step: 3, label: '완성', shortLabel: '완성' },
+            ] as const).map(({ step, label, shortLabel }) => (
               <button
                 key={step}
-                onClick={() => editor.setCurrentStep(step as 1 | 2 | 3)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                onClick={() => editor.setCurrentStep(step)}
+                className={`flex-1 py-2 px-2 sm:px-3 rounded-lg text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   editor.currentStep === step
-                    ? 'bg-indigo-500 text-white'
+                    ? 'bg-primary-500 text-white'
                     : editor.currentStep > step
                       ? 'bg-green-100 text-green-700'
                       : 'bg-gray-100 text-gray-500'
                 }`}
               >
-                {step === 1 && '1. 4컷 스토리'}
-                {step === 2 && '2. 장면 확장'}
-                {step === 3 && '3. 완성'}
+                <span className="sm:hidden">{step}. {shortLabel}</span>
+                <span className="hidden sm:inline">{step}. {label}</span>
               </button>
             ))}
           </div>
@@ -126,17 +122,17 @@ export default function WorkEditPage() {
             </div>
 
             {editor.getCompletedStep() >= 2 && (
-              <div className="card mb-6 bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-200">
+              <div className="card mb-6 bg-gradient-to-r from-primary-50 to-primary-100 border-primary-200">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-indigo-700">4컷 스토리 작성 완료!</p>
-                    <p className="text-sm text-indigo-600 mt-1">
+                    <p className="font-medium text-primary-700">4컷 스토리 작성 완료!</p>
+                    <p className="text-sm text-primary-600 mt-1">
                       이제 각 장면을 더 상세하게 확장해보세요.
                     </p>
                   </div>
                   <button
                     onClick={editor.handleGoToSceneExpansion}
-                    className="px-6 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
+                    className="px-6 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 transition-colors"
                   >
                     장면 확장하기
                   </button>
@@ -273,6 +269,23 @@ export default function WorkEditPage() {
             >
               <FileText className="w-5 h-5" />
               자막 파일 (.srt)
+            </button>
+          </div>
+        </div>
+
+        {/* 작품 삭제 (위험 영역) */}
+        <div className="border border-red-200 rounded-xl p-4 mb-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">이 작품 삭제</p>
+              <p className="text-xs text-gray-400 mt-0.5">삭제하면 되돌릴 수 없습니다</p>
+            </div>
+            <button
+              onClick={editor.handleDelete}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm text-red-500 border border-red-200 rounded-lg hover:bg-red-50 hover:border-red-300 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              삭제
             </button>
           </div>
         </div>
