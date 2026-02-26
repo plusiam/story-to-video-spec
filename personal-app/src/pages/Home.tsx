@@ -100,6 +100,33 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* 이렇게 사용해요 */}
+        <div className="mb-12 fade-in" style={{ animationDelay: '0.4s' }}>
+          <h2 className="text-center text-xl font-bold text-gray-800 mb-8">
+            이렇게 사용해요
+          </h2>
+          <div className="flex flex-col md:flex-row items-center gap-4 md:gap-2">
+            {[
+              { num: '1', title: '4컷 스토리 쓰기', desc: '기승전결에 맞춰\n짧은 이야기를 써요', emoji: '✏️' },
+              { num: '2', title: '장면 확장하기', desc: '각 장면을 더 자세하게\n풍부하게 만들어요', emoji: '🎬' },
+              { num: '3', title: 'AI로 완성하기', desc: 'AI가 그림책 스타일의\n스토리로 완성해줘요', emoji: '🤖' },
+            ].map((step, i) => (
+              <div key={step.num} className="flex items-center gap-2 md:gap-0 md:flex-col md:flex-1 w-full md:w-auto">
+                <div className="flex flex-col items-center text-center flex-1 md:flex-none">
+                  <div className="w-14 h-14 rounded-full bg-white shadow-md flex items-center justify-center text-2xl mb-2">
+                    {step.emoji}
+                  </div>
+                  <p className="font-bold text-gray-700 text-sm">{step.title}</p>
+                  <p className="text-xs text-gray-500 mt-1 whitespace-pre-line">{step.desc}</p>
+                </div>
+                {i < 2 && (
+                  <div className="hidden md:block text-gray-300 text-2xl mx-2">→</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* 로그인 상태 표시 */}
         {isAuthenticated && user && (
           <div className="text-center text-gray-500 text-sm">
