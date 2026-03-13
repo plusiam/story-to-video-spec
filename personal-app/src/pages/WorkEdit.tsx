@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Save, Trash2, Wand2, Download, FileText, FileJson, Loader2, X, Image } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 import { useWorkEditor } from '@/hooks/useWorkEditor';
 import {
@@ -8,6 +8,7 @@ import {
   Step2SceneExpansion,
   Step3AICompletion
 } from '@/components/story';
+import { SlidePreviewModal } from '@/components/slide';
 
 /**
  * 작품 편집 페이지
@@ -270,6 +271,13 @@ export default function WorkEditPage() {
               <FileText className="w-5 h-5" />
               자막 파일 (.srt)
             </button>
+            <button
+              onClick={editor.handleOpenSlidePreview}
+              className="btn btn-outline flex items-center justify-center gap-2 py-3 hover:bg-blue-50 hover:border-blue-300 sm:col-span-2"
+            >
+              <Image className="w-5 h-5 text-blue-500" />
+              슬라이드 미리보기 / PNG 저장
+            </button>
           </div>
         </div>
 
@@ -290,6 +298,16 @@ export default function WorkEditPage() {
           </div>
         </div>
       </main>
+
+      {/* 슬라이드 미리보기 모달 */}
+      {editor.showSlidePreview && (
+        <SlidePreviewModal
+          title={editor.title}
+          panels={editor.panels}
+          scenes={editor.scenes}
+          onClose={editor.handleCloseSlidePreview}
+        />
+      )}
     </div>
   );
 }

@@ -43,6 +43,9 @@ export function useWorkEditor(id: string | undefined) {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
 
+  // 슬라이드 미리보기 모달 상태
+  const [showSlidePreview, setShowSlidePreview] = useState(false);
+
   // 비주얼 DNA 동기화
   useEffect(() => {
     if (visualDNA) {
@@ -430,6 +433,16 @@ ${panels.gyeol || '(작성되지 않음)'}
     downloadFile(entries.join('\n'), `${title || '스토리'}-captions.srt`, 'text/plain');
   }, [title, collectVidsScenes, estimateDurationSec, formatSrtTime, downloadFile]);
 
+  // 슬라이드 미리보기 열기
+  const handleOpenSlidePreview = useCallback(() => {
+    setShowSlidePreview(true);
+  }, []);
+
+  // 슬라이드 미리보기 닫기
+  const handleCloseSlidePreview = useCallback(() => {
+    setShowSlidePreview(false);
+  }, []);
+
   return {
     // 상태
     work,
@@ -445,6 +458,7 @@ ${panels.gyeol || '(작성되지 않음)'}
     aiIdea,
     isAiLoading,
     aiError,
+    showSlidePreview,
 
     // 핸들러
     setCurrentStep,
@@ -467,5 +481,9 @@ ${panels.gyeol || '(작성되지 않음)'}
     handleDownloadVidsStoryboard,
     handleDownloadVidsScript,
     handleDownloadVidsCaptions,
+
+    // 슬라이드
+    handleOpenSlidePreview,
+    handleCloseSlidePreview,
   };
 }
