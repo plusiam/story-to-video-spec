@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper-base font-sans text-ink antialiased;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  /* 키보드 초점은 항상 보이게 */
+  :focus-visible {
+    outline: 2px solid #26407a;
+    outline-offset: 2px;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-serif text-ink;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply mb-1 block text-sm font-semibold text-ink;
+  }
+  .field-hint {
+    @apply mt-1 text-[13px] text-ink-soft;
+  }
+  .input {
+    @apply w-full rounded-md border border-paper-line bg-white px-3 py-2 text-[15px] text-ink placeholder:text-ink-faint focus:border-jjok focus:outline-none focus:ring-2 focus:ring-jjok/20;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-jjok text-white hover:bg-jjok-deep disabled:bg-paper-line disabled:text-ink-faint;
+  }
+  .btn-quiet {
+    @apply btn border border-paper-line bg-white text-ink hover:border-ink-faint disabled:text-ink-faint;
+  }
+  .btn-danger {
+    @apply btn border border-danger/30 bg-white text-danger hover:bg-danger-tint;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
