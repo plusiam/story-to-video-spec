@@ -36,7 +36,7 @@ export function ExportPage() {
         <section className="mt-6 rounded-lg border border-paper-line bg-paper p-5">
           <h2 className="font-sans text-base font-bold">프로젝트 JSON 백업</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            지금 저장은 이 브라우저 안에만 됩니다. 다른 기기에서 이어 하거나 브라우저 기록을 지울 때를 대비해 백업을 받아 두세요.
+            작업 폴더를 연결했다면 project.json이 이미 폴더에 있습니다. 폴더 없이 쓰는 경우나 따로 보관할 때 이 백업을 받아 두세요.
           </p>
           <button type="button" className="btn-primary mt-3" onClick={downloadJson} data-testid={appTid('export-json')}>
             JSON 백업 내려받기

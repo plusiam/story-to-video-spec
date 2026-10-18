@@ -4,7 +4,7 @@
 
 ## 기술 스택
 
-React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6. 저장은 지금 localStorage(`src/lib/storage.ts`), 다음에 Supabase. 배포는 Vercel. `api/gemini.ts`는 Vercel 서버 함수(M2에서 원고 다듬기에 사용).
+React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6. 서버 없이 동작한다: 프로젝트 JSON은 localStorage(`src/lib/storage.ts`), 파일은 운영자가 연결한 작업 폴더(`src/lib/folder.ts`, File System Access API). 배포는 Vercel(정적). `api/gemini.ts`는 2차 API 연동 때 쓸 서버 함수로 남겨 둔다.
 
 ## 에이전트 친화 설계 원칙 (모든 화면의 완료 기준)
 
@@ -21,7 +21,9 @@ React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6. 저장은 지금
 11. 단계 완료 버튼은 품질 점검을 통과해야 열리고, 잠긴 이유를 글로 보여 준다.
 12. 비밀번호·결제·API 키를 화면에서 다루지 않는다.
 
-`tests/e2e/m1.spec.ts`가 1·2·11번을 자동 검사한다. 새 화면을 만들면 같은 검사를 그 화면에도 돌린다.
+`tests/e2e/`가 1·2·11번을 자동 검사한다(`helpers.ts`의 `missingTestIds`, `unlabeledInputs`). 새 화면을 만들면 같은 검사를 그 화면에도 돌린다. 테스트에서 폴더 선택 창은 OPFS로 바꿔 끼운다.
+
+외부 AI 결과는 `src/components/AiAssist.tsx`(요청문 복사 + 붙여넣기 + 검사)로 받는다. 검사 함수는 `src/lib/aiRequests.ts`에 둔다.
 
 ## 지침 수정 규칙
 

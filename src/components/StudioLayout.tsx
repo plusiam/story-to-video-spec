@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { GUIDES } from '@/guides';
 import { saveStateText, type SaveState } from '@/hooks/useProject';
 import { store } from '@/lib/storage';
+import { FolderStatus } from './FolderStatus';
 import { appTid } from '@/lib/testid';
 import type { Project, StepNo } from '@/types/project';
 import { ActivityLog } from './ActivityLog';
@@ -85,6 +86,9 @@ export function AppHeader({ project, saveState }: { project?: Project; saveState
           </>
         )}
         {!project && <span className="ml-auto text-xs text-ink-faint">{store.label}</span>}
+        <div className="w-full border-t border-paper-line pt-1.5 lg:w-auto lg:border-0 lg:pt-0">
+          <FolderStatus compact />
+        </div>
       </div>
     </header>
   );

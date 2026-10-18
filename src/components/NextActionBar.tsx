@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { useFolder } from '@/hooks/useFolder';
 import { appTid } from '@/lib/testid';
 import { nextAction } from '@/lib/steps';
 import type { Project, StepNo } from '@/types/project';
@@ -8,7 +9,8 @@ import type { Project, StepNo } from '@/types/project';
  * 사람과 브라우저 AI가 같은 문장을 읽는다. 화면에서 가장 강한 요소는 이것 하나다.
  */
 export function NextActionBar({ project, viewing }: { project: Project; viewing: StepNo | null }) {
-  const next = nextAction(project);
+  const { state } = useFolder();
+  const next = nextAction(project, { folder: state });
   const elsewhere = next.step !== null && next.step !== viewing;
 
   return (

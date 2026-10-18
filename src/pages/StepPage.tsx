@@ -6,6 +6,9 @@ import { useProject } from '@/hooks/useProject';
 import { currentStep } from '@/lib/steps';
 import { tid } from '@/lib/testid';
 import { Step0Settings } from '@/steps/Step0Settings';
+import { Step1Script } from '@/steps/Step1Script';
+import { Step2Scenes } from '@/steps/Step2Scenes';
+import { Step3VisualDNA } from '@/steps/Step3VisualDNA';
 import { StepPending } from '@/steps/StepPending';
 import type { StepNo } from '@/types/project';
 import { LoadingOrError } from './LoadingOrError';
@@ -47,7 +50,11 @@ export function StepPage() {
         </h1>
       </header>
 
-      {step === 0 ? <Step0Settings project={project} api={api} /> : <StepPending step={step} />}
+      {step === 0 && <Step0Settings project={project} api={api} />}
+      {step === 1 && <Step1Script project={project} api={api} />}
+      {step === 2 && <Step2Scenes project={project} api={api} />}
+      {step === 3 && <Step3VisualDNA project={project} api={api} />}
+      {step >= 4 && <StepPending step={step} />}
 
       <StepChecks step={step} project={project} api={api} />
     </StudioLayout>

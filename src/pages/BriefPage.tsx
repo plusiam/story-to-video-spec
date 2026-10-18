@@ -2,7 +2,9 @@ import { Link, useParams } from 'react-router-dom';
 import { CopyButton } from '@/components/CopyButton';
 import { NextActionBar } from '@/components/NextActionBar';
 import { AppHeader } from '@/components/StudioLayout';
+import { FolderStatus } from '@/components/FolderStatus';
 import { GUIDES, guideLabel } from '@/guides';
+import { useFolder } from '@/hooks/useFolder';
 import { useProject } from '@/hooks/useProject';
 import { WORK_RULES, buildBriefMarkdown } from '@/lib/brief';
 import { STATUS_LABEL, blockReason, stepStatus } from '@/lib/steps';
@@ -17,6 +19,7 @@ import { LoadingOrError } from './LoadingOrError';
 export function BriefPage() {
   const { id } = useParams();
   const api = useProject(id);
+  const { state: folder } = useFolder();
   const p = api.project;
   if (!p) return <LoadingOrError error={api.loadError} />;
 
@@ -30,8 +33,15 @@ export function BriefPage() {
             <p className="text-sm text-ink-soft">작업 브리핑 · 프로젝트 ID {p.id}</p>
             <h1 className="text-[28px] leading-tight">{p.title}</h1>
           </div>
-          <CopyButton text={buildBriefMarkdown(p, window.location.origin)} label="브리핑 전체 복사" testid={appTid('brief-copy')} className="btn-primary" />
+          <CopyButton text={buildBriefMarkdown(p, window.location.origin, { folder })} label="브리핑 전체 복사" testid={appTid('brief-copy')} className="btn-primary" />
         </div>
+
+        <section aria-labelledby="folder-heading" className="mb-8 rounded-lg border border-paper-line bg-paper p-4">
+          <h2 id="folder-heading" className="mb-2 font-sans text-sm font-bold">
+            작업 폴더
+          </h2>
+          <FolderStatus />
+        </section>
 
         <section aria-labelledby="status-heading" className="mb-8">
           <h2 id="status-heading" className="mb-2 text-xl">

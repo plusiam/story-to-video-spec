@@ -5,14 +5,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GUIDES, guideLabel } from '@/guides';
 import { appendLog, clock, nowIso } from '@/lib/project';
-import { checksFor } from '@/lib/steps';
+import { mirrorProject } from '@/lib/folder';
+import { checksFor, type StepEnv } from '@/lib/steps';
 import { store } from '@/lib/storage';
 import type { Project, StepNo } from '@/types/project';
 
 export type SaveState =
   | { kind: 'idle' }
   | { kind: 'pending' }
-  | { kind: 'saved'; at: string }
+  | { kind: 'saved'; at: string; folder: string | null }
   | { kind: 'error'; message: string };
 
 export const AUTOSAVE_MS = 2000;
@@ -24,7 +25,7 @@ export function saveStateText(s: SaveState): string {
     case 'pending':
       return '저장 중…';
     case 'saved':
-      return `저장됨 ${clock(s.at)}`;
+      return s.folder ? `저장됨 ${clock(s.at)} · 작업 폴더에도 저장` : `저장됨 ${clock(s.at)} · 이 브라우저에만`;
     case 'error':
       return `저장 실패: ${s.message}`;
   }
@@ -66,9 +67,15 @@ export function useProject(id: string | undefined) {
     if (!p) return;
     try {
       await store.save(p);
-      setSaveState({ kind: 'saved', at: p.updatedAt });
     } catch (err) {
       setSaveState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+      return;
+    }
+    try {
+      const m = await mirrorProject(p);
+      setSaveState({ kind: 'saved', at: p.updatedAt, folder: m.written ? m.folder ?? null : null });
+    } catch (err) {
+      setSaveState({ kind: 'error', message: `브라우저에는 저장했지만 작업 폴더에 쓰지 못했습니다: ${err instanceof Error ? err.message : String(err)}` });
     }
   }, []);
 
@@ -110,10 +117,10 @@ export function useProject(id: string | undefined) {
 
   /** 단계 완료. 점검을 통과하지 못하면 false와 사유를 돌려준다 */
   const completeStep = useCallback(
-    (step: StepNo): { ok: true } | { ok: false; reasons: string[] } => {
+    (step: StepNo, env: StepEnv): { ok: true } | { ok: false; reasons: string[] } => {
       const p = latest.current;
       if (!p) return { ok: false, reasons: ['프로젝트를 아직 불러오지 못했습니다.'] };
-      const failing = checksFor(step, p).filter((c) => !c.ok);
+      const failing = checksFor(step, p, env).filter((c) => !c.ok);
       if (failing.length) return { ok: false, reasons: failing.map((c) => c.fix) };
       update((cur) =>
         appendLog(

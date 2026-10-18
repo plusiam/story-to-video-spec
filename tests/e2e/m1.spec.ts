@@ -1,38 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
+import { connectFolder, expect, missingTestIds, newProject, test, unlabeledInputs } from './helpers';
 
 /**
  * M1 관문: 빈 프로젝트로 0~7단계 이동, 브리핑 페이지 표시, 이름표 점검 통과
  */
-
-/** 화면의 조작 가능한 요소 중 data-testid가 없는 것을 찾는다 (에이전트 친화 원칙 1번) */
-async function missingTestIds(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const els = Array.from(document.querySelectorAll('button, input, textarea, select, a[href]'));
-    return els
-      .filter((el) => !el.getAttribute('data-testid'))
-      .map((el) => `${el.tagName.toLowerCase()}「${(el.textContent || (el as HTMLInputElement).name || '').trim().slice(0, 30)}」`);
-  });
-}
-
-/** 입력칸이 보이는 라벨과 연결되어 있는지 (원칙 2번) */
-async function unlabeledInputs(page: Page): Promise<string[]> {
-  return page.evaluate(() =>
-    Array.from(document.querySelectorAll('input, textarea, select'))
-      .filter((el) => {
-        const input = el as HTMLInputElement;
-        if (input.type === 'file' || input.closest('label')) return false;
-        return !(input.labels && input.labels.length > 0) && !input.getAttribute('aria-label');
-      })
-      .map((el) => el.getAttribute('data-testid') || el.tagName),
-  );
-}
-
-async function newProject(page: Page): Promise<string> {
-  await page.goto('/projects');
-  await page.getByTestId('app-new-project').click();
-  await expect(page).toHaveURL(/\/p\/proj_[a-z0-9]+\/step\/0$/);
-  return page.url().match(/\/p\/(proj_[a-z0-9]+)\//)![1];
-}
 
 test('프로젝트 목록과 새 프로젝트 만들기', async ({ page }) => {
   await page.goto('/');
@@ -50,7 +20,7 @@ test('빈 프로젝트로 0~7단계를 주소로 이동하고, 단계마다 이�
   for (let n = 0; n <= 7; n++) {
     await page.goto(`/p/${id}/step/${n}`);
     await expect(page.getByTestId(`s${n}-heading`)).toBeVisible();
-    await expect(page.getByTestId('app-guide-panel')).toHaveAttribute('data-guide', `GUIDE-S${n} v1.0`);
+    await expect(page.getByTestId('app-guide-panel')).toHaveAttribute('data-guide', new RegExp(`^GUIDE-S${n} v1\\.\\d+$`));
     await expect(page.getByTestId(`app-nav-step-${n}`)).toHaveAttribute('aria-current', 'step');
     await expect(page.getByTestId(`s${n}-complete`)).toBeDisabled();
     await expect(page.getByTestId('app-complete-locked-reason')).toBeVisible();
@@ -72,6 +42,9 @@ test('0단계: 점검을 통과해야 완료되고, 완료 후 다음 할 일이
 
   await page.getByTestId('s0-source-note').fill('경상도 지역 전래 민담, 할머니께 들은 줄거리');
   await page.getByTestId('s0-no-commercial-book').check();
+  await expect(page.getByTestId('app-next-action')).toContainText('app-folder-connect');
+  await expect(complete).toBeDisabled();
+  await connectFolder(page);
   await expect(page.getByTestId('app-next-action')).toContainText('s0-complete');
   await expect(complete).toBeEnabled();
 
@@ -82,7 +55,7 @@ test('0단계: 점검을 통과해야 완료되고, 완료 후 다음 할 일이
   await expect(page.getByTestId('app-nav-step-0')).toHaveAttribute('data-status', 'done');
 
   // 자동 저장(2초) 후 새로고침해도 남아 있다
-  await expect(page.getByTestId('app-save-status')).toContainText('저장됨', { timeout: 5000 });
+  await expect(page.getByTestId('app-save-status')).toContainText('작업 폴더에도 저장', { timeout: 5000 });
   await page.reload();
   await expect(page.getByTestId('s0-title')).toHaveValue('은혜 갚은 까치');
   await expect(page.getByTestId('app-step-done')).toBeVisible();
@@ -105,6 +78,7 @@ test('브리핑 페이지: 진행 상태, 규칙, 8개 지침, 전체 복사', a
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain(`# 작업 브리핑`);
   expect(copied).toContain('[GUIDE-S5 v1.0] 5단계 장면 이미지');
+  expect(copied).toContain('작업 폴더');
 });
 
 test('내보내기와 JSON 불러오기: 형식 오류는 글로 알려 준다', async ({ page }) => {
@@ -119,5 +93,5 @@ test('내보내기와 JSON 불러오기: 형식 오류는 글로 알려 준다',
   await page.goto('/projects');
   await page.getByTestId('app-import-text').fill('{"schemaVersion":"0.9","id":"x"}');
   await page.getByTestId('app-import-submit').click();
-  await expect(page.getByTestId('app-import-errors')).toContainText('schemaVersion이 "1.0"이어야 합니다');
+  await expect(page.getByTestId('app-import-errors')).toContainText('schemaVersion이 "1.0" 또는 "1.1"이어야 합니다');
 });

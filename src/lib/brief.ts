@@ -3,7 +3,8 @@
  * 전체 지침 + 진행 상태 + 다음 할 일을 글 한 덩어리로 만든다. 브리핑 페이지의 "전체 복사"가 이 글을 복사한다.
  */
 import { GUIDES, guideLabel } from '@/guides';
-import { STATUS_LABEL, blockReason, nextAction, stepStatus } from '@/lib/steps';
+import { STATUS_LABEL, blockReason, nextAction, stepStatus, type StepEnv } from '@/lib/steps';
+import { FOLDER_STATE_TEXT } from '@/lib/folder';
 import { STEP_NUMBERS, type Project } from '@/types/project';
 
 export const WORK_RULES = [
@@ -15,16 +16,19 @@ export const WORK_RULES = [
   '「화면 준비 중」 단계에 도착하면 작업을 멈추고 운영자에게 알린다.',
   '비밀번호, 결제, API 키는 다루지 않는다. 외부 서비스는 운영자가 미리 로그인해 둔 상태에서만 쓴다.',
   '운영자 승인 버튼(기준 시트 승인 등)은 누르지 않는다. 승인을 요청하고 기다린다.',
+  '작업 폴더 연결·다시 허용은 브라우저가 띄우는 창이라 운영자만 할 수 있다. 「다음 할 일」이 폴더를 요구하면 운영자에게 요청한다.',
+  '외부 AI에 보낼 요청문은 복사 버튼으로 가져가고, 답은 전체를 복사해 「결과 붙여넣기」 칸에 넣는다. 형식 오류가 나오면 그 문장을 외부 AI에 그대로 전해 고치게 한다.',
 ];
 
-export function buildBriefMarkdown(p: Project, origin: string): string {
-  const next = nextAction(p);
+export function buildBriefMarkdown(p: Project, origin: string, env: StepEnv): string {
+  const next = nextAction(p, env);
   const lines: string[] = [];
   lines.push(`# 작업 브리핑: ${p.title}`);
   lines.push('');
   lines.push(`- 프로젝트 ID: ${p.id}`);
   lines.push(`- 브리핑 주소: ${origin}/p/${p.id}/brief`);
   lines.push(`- 마지막 저장: ${p.updatedAt}`);
+  lines.push(`- 작업 폴더: ${env.folder ? FOLDER_STATE_TEXT[env.folder.kind] : '확인 중'}${env.folder && 'name' in env.folder ? ` (${env.folder.name})` : ''}`);
   lines.push('');
   lines.push('## 다음 할 일');
   lines.push(next.text);

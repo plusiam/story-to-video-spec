@@ -23,6 +23,12 @@ export function newId(prefix: string): string {
 
 export const LOG_LIMIT = 300;
 
+/** 기본 말투: 시니어가 귀로 편하게 듣는 옛이야기 화법 */
+export const DEFAULT_TONE = '할머니가 손주에게 들려주듯 다정하고 느긋한 말투. 문장 끝은 "~했단다", "~했지요", "~였어요"를 섞어 씁니다.';
+
+/** 기본 금지 요소 (그림 안에 들어가면 안 되는 것) */
+export const DEFAULT_NEGATIVES = '글자, 워터마크, 서명, 말풍선, 사실적인 사람 얼굴, 현대 물건';
+
 export function appendLog(project: Project, event: string, guide: string | null = null): Project {
   const entry: LogEntry = { at: nowIso(), guide, event };
   return { ...project, log: [...project.log, entry].slice(-LOG_LIMIT) };
@@ -39,11 +45,11 @@ export function createEmptyProject(title = '제목 없는 옛이야기'): Projec
     updatedAt: at,
     source: { type: null, note: '', noCommercialBookConfirmed: false },
     target: { durationSec: 360, aspect: '16:9', series: '' },
-    script: { outline: ['', '', '', ''], fullText: '', status: 'draft' },
+    script: { outline: ['', '', '', ''], fullText: '', tone: DEFAULT_TONE, ownWordingConfirmed: false },
     visualDNA: {
       stylePreset: null,
       customStyle: '',
-      negatives: ['글자', '워터마크', '사실적인 사람 얼굴'],
+      negatives: DEFAULT_NEGATIVES,
       characters: [],
       locations: [],
     },
@@ -57,6 +63,47 @@ export function createEmptyProject(title = '제목 없는 옛이야기'): Projec
 }
 
 /**
+ * 옛 버전 프로젝트를 최신 스키마로 올린다. 모르는 버전이면 그대로 돌려준다.
+ * 1.0 → 1.1: 말투·원작 문장 확인 추가, 장면 장소·인물을 이름으로, 금지 요소를 글 한 줄로
+ */
+export function migrateProject(raw: Record<string, unknown>): Record<string, unknown> {
+  if (raw.schemaVersion !== '1.0') return raw;
+  const p = structuredClone(raw) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  p.script = {
+    outline: p.script?.outline ?? ['', '', '', ''],
+    fullText: p.script?.fullText ?? '',
+    tone: DEFAULT_TONE,
+    ownWordingConfirmed: false,
+  };
+  const negs = p.visualDNA?.negatives;
+  p.visualDNA = {
+    ...p.visualDNA,
+    negatives: Array.isArray(negs) ? negs.join(', ') : DEFAULT_NEGATIVES,
+    characters: (p.visualDNA?.characters ?? []).map((c: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+      ...c,
+      colors: [c.colors?.[0] ?? '#8B5A2B', c.colors?.[1] ?? '#F2E3C6', c.colors?.[2] ?? '#4A6741'],
+      refSheet: { file: c.refSheet?.assetId ?? null, approved: Boolean(c.refSheet?.approved) },
+    })),
+  };
+  p.scenes = (p.scenes ?? []).map((sc: any) => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
+    id: sc.id,
+    panel: sc.panel ?? 'ki',
+    narration: sc.narration ?? '',
+    visual: sc.visual ?? '',
+    location: '',
+    characters: '',
+    emotion: sc.emotion ?? '',
+    durationSec: sc.durationSec ?? 0,
+    motionClip: Boolean(sc.motionClip),
+    image: { file: sc.image?.assetId ?? null, checks: sc.image?.checks ?? [] },
+    audio: { file: sc.audio?.assetId ?? null, measuredSec: sc.audio?.measuredSec ?? null },
+  }));
+  p.schemaVersion = SCHEMA_VERSION;
+  p.log = [...(p.log ?? []), { at: nowIso(), guide: null, event: '프로젝트를 스키마 1.1로 올렸습니다' }];
+  return p;
+}
+
+/**
  * 불러온 JSON 검사. 틀린 곳을 글로 돌려준다 (브라우저 AI가 읽고 고칠 수 있게).
  * 통과하면 errors가 빈 배열이다.
  */
@@ -65,9 +112,9 @@ export function validateProjectJson(raw: unknown): { project: Project | null; er
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
     return { project: null, errors: ['JSON 최상위가 객체({ ... })가 아닙니다.'] };
   }
-  const p = raw as Record<string, unknown>;
+  const p = migrateProject(raw as Record<string, unknown>);
   if (p.schemaVersion !== SCHEMA_VERSION) {
-    errors.push(`schemaVersion이 "${SCHEMA_VERSION}"이어야 합니다. 받은 값: ${JSON.stringify(p.schemaVersion)}`);
+    errors.push(`schemaVersion이 "1.0" 또는 "${SCHEMA_VERSION}"이어야 합니다. 받은 값: ${JSON.stringify(p.schemaVersion)}`);
   }
   if (typeof p.id !== 'string' || !p.id) errors.push('id(문자열)가 없습니다.');
   if (typeof p.title !== 'string') errors.push('title(문자열)이 없습니다.');
@@ -76,5 +123,5 @@ export function validateProjectJson(raw: unknown): { project: Project | null; er
   }
   if (!Array.isArray(p.scenes)) errors.push('scenes(배열)가 없습니다.');
   if (!Array.isArray(p.log)) errors.push('log(배열)가 없습니다.');
-  return errors.length ? { project: null, errors } : { project: raw as Project, errors };
+  return errors.length ? { project: null, errors } : { project: p as unknown as Project, errors };
 }

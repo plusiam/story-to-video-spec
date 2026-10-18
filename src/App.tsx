@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { FolderProvider } from '@/hooks/useFolder';
 import { BriefPage } from '@/pages/BriefPage';
 import { ExportPage } from '@/pages/ExportPage';
 import { ProjectsPage } from '@/pages/ProjectsPage';
@@ -14,6 +15,7 @@ import { ProjectRedirect, StepPage } from '@/pages/StepPage';
  */
 export default function App() {
   return (
+    <FolderProvider>
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Navigate to="/projects" replace />} />
@@ -25,5 +27,6 @@ export default function App() {
         <Route path="*" element={<Navigate to="/projects" replace />} />
       </Routes>
     </BrowserRouter>
+    </FolderProvider>
   );
 }

@@ -5,14 +5,32 @@
  * 사람과 브라우저 AI가 같은 문장을 읽게 하기 위해서다.
  */
 import { GUIDES } from '@/guides';
+import type { FolderState } from '@/lib/folder';
+import { pad2 } from '@/lib/testid';
+import {
+  SCENE_NARRATION_MAX,
+  SENTENCE_MAX,
+  charCount,
+  flagSentences,
+  namesInScenes,
+  sceneCountRange,
+  sentenceLength,
+  targetRange,
+} from '@/lib/text';
 import { STEP_NUMBERS, type Project, type StepNo } from '@/types/project';
 
 export interface Check {
+  /** 고칠 곳의 이름표 (data-testid) */
   id: string;
   label: string;
   ok: boolean;
   /** 실패했을 때 고치는 방법 */
   fix: string;
+}
+
+/** 프로젝트 밖의 환경 (이 브라우저의 작업 폴더 상태) */
+export interface StepEnv {
+  folder: FolderState | null;
 }
 
 export type StepStatus = 'done' | 'doing' | 'waiting' | 'blocked';
@@ -24,8 +42,33 @@ export const STATUS_LABEL: Record<StepStatus, string> = {
   blocked: '막힘',
 };
 
+function folderCheck(env: StepEnv): Check {
+  const f = env.folder;
+  if (f?.kind === 'ready') return { id: 'app-folder', label: '작업 폴더 연결됨', ok: true, fix: '' };
+  const fix =
+    f?.kind === 'unsupported'
+      ? '이 브라우저는 작업 폴더를 지원하지 않습니다. 크롬이나 엣지에서 여세요.'
+      : f?.kind === 'needs-permission'
+        ? '운영자에게 「폴더 다시 허용」(app-folder-reauthorize)을 눌러 달라고 요청하세요. 허용 창은 운영자만 누를 수 있습니다.'
+        : '운영자에게 「작업 폴더 연결」(app-folder-connect)을 요청하세요. 폴더 선택 창은 운영자만 누를 수 있습니다.';
+  return { id: f?.kind === 'needs-permission' ? 'app-folder-reauthorize' : 'app-folder-connect', label: '작업 폴더 연결됨', ok: false, fix };
+}
+
+/** 첫 번째 실패 위치를 가리키는 점검 하나 만들기 */
+function firstFailing<T>(
+  items: T[],
+  bad: (item: T) => boolean,
+  make: (index: number) => { id: string; fix: string },
+  label: string,
+  emptyId: string,
+): Check {
+  const i = items.findIndex(bad);
+  if (i < 0) return { id: emptyId, label, ok: true, fix: '' };
+  return { ...make(i), label, ok: false };
+}
+
 /** 단계별 품질 점검. 아직 화면이 없는 단계는 "준비 중" 점검 하나만 돌려준다 */
-export function checksFor(step: StepNo, p: Project): Check[] {
+export function checksFor(step: StepNo, p: Project, env: StepEnv): Check[] {
   const guide = GUIDES[step];
   if (!guide.implemented) {
     return [
@@ -47,8 +90,149 @@ export function checksFor(step: StepNo, p: Project): Check[] {
         { id: 's0-source-note', label: '출처 메모 10자 이상', ok: p.source.note.trim().length >= 10, fix: '줄거리를 어디서 알게 되었는지 10자 이상 적으세요.' },
         { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
         { id: 's0-duration-min', label: '목표 길이 3~15분', ok: minutes >= 3 && minutes <= 15, fix: '목표 길이를 3분에서 15분 사이로 정하세요.' },
+        folderCheck(env),
       ];
     }
+
+    case 1: {
+      const { min, max } = targetRange(p.target.durationSec);
+      const n = charCount(p.script.fullText);
+      const flags = flagSentences(p.script.fullText);
+      const long = flags.filter((f) => f.kind === 'long');
+      const notation = flags.filter((f) => f.kind !== 'long');
+      const emptyOutline = p.script.outline.findIndex((l) => !l.trim());
+      return [
+        {
+          id: emptyOutline < 0 ? 's1-outline-01' : `s1-outline-${pad2(emptyOutline + 1)}`,
+          label: '기승전결 뼈대 4줄',
+          ok: emptyOutline < 0,
+          fix: `뼈대 ${['기', '승', '전', '결'][Math.max(0, emptyOutline)]} 줄을 채우세요.`,
+        },
+        {
+          id: 's1-full-text',
+          label: `원고 분량 ${min.toLocaleString('ko-KR')}~${max.toLocaleString('ko-KR')}자`,
+          ok: n >= min && n <= max,
+          fix:
+            n === 0
+              ? '원고를 쓰거나, AI 요청문(s1-copy-request)으로 받은 원고를 붙여 넣으세요(s1-paste).'
+              : `원고가 공백 빼고 ${n.toLocaleString('ko-KR')}자입니다. ${min.toLocaleString('ko-KR')}~${max.toLocaleString('ko-KR')}자로 ${n < min ? '늘리세요' : '줄이세요'}.`,
+        },
+        {
+          id: 's1-flags',
+          label: `긴 문장 없음 (${SENTENCE_MAX}자 이하)`,
+          ok: long.length === 0,
+          fix: `${long.map((f) => f.sentenceNo).slice(0, 5).join(', ')}번째 문장 등 ${long.length}개가 ${SENTENCE_MAX}자를 넘습니다. 원고 아래 표시된 문장을 둘로 나누세요.`,
+        },
+        {
+          id: 's1-flags',
+          label: '영어·숫자 표기 없음',
+          ok: notation.length === 0,
+          fix: `${notation.map((f) => f.sentenceNo).slice(0, 5).join(', ')}번째 문장에 영어나 숫자가 있습니다. 소리 나는 대로 한글로 바꾸세요.`,
+        },
+        {
+          id: 's1-own-wording',
+          label: '원작 문장을 옮기지 않음 확인',
+          ok: p.script.ownWordingConfirmed,
+          fix: '원고를 다시 읽고, 출판된 책의 문장을 옮긴 곳이 없으면 확인란에 체크하세요.',
+        },
+      ];
+    }
+
+    case 2: {
+      const s = p.scenes;
+      const { min, max } = sceneCountRange(p.target.durationSec);
+      const nar = charCount(s.map((x) => x.narration).join(''));
+      const script = charCount(p.script.fullText);
+      const coverage = script ? Math.abs(nar - script) / script : 1;
+      const sid = (i: number, field: string) => `s2-scene-${pad2(i + 1)}-${field}`;
+      return [
+        {
+          id: s.length ? 's2-scene-list' : 's2-split',
+          label: `장면 ${min}~${max}개`,
+          ok: s.length >= min && s.length <= max,
+          fix: s.length
+            ? `장면이 ${s.length}개입니다. ${min}~${max}개가 되도록 ${s.length < min ? '나누세요' : '합치세요'}.`
+            : '「원고에서 장면 나누기」(s2-split)를 누르거나, AI 장면표를 붙여 넣으세요(s2-paste).',
+        },
+        firstFailing(
+          s,
+          (x) => !x.narration.trim() || sentenceLength(x.narration) > SCENE_NARRATION_MAX,
+          (i) => ({
+            id: sid(i, 'narration'),
+            fix: `${i + 1}번 장면 내레이션이 ${s[i].narration.trim() ? `${sentenceLength(s[i].narration)}자입니다. ${SCENE_NARRATION_MAX}자 이하로 줄이거나 장면을 나누세요` : '비었습니다'}.`,
+          }),
+          `내레이션 장면당 ${SCENE_NARRATION_MAX}자 이하`,
+          's2-scene-list',
+        ),
+        firstFailing(s, (x) => !x.visual.trim(), (i) => ({ id: sid(i, 'visual'), fix: `${i + 1}번 장면의 화면 설명을 쓰세요.` }), '모든 장면에 화면 설명', 's2-scene-list'),
+        firstFailing(s, (x) => !x.location.trim(), (i) => ({ id: sid(i, 'location'), fix: `${i + 1}번 장면의 장소를 쓰세요.` }), '모든 장면에 장소', 's2-scene-list'),
+        firstFailing(
+          s,
+          (x) => !x.characters.trim(),
+          (i) => ({ id: sid(i, 'characters'), fix: `${i + 1}번 장면의 등장인물을 쓰세요. 인물이 없으면 "없음".` }),
+          '모든 장면에 등장인물(없으면 "없음")',
+          's2-scene-list',
+        ),
+        {
+          id: 's2-scene-list',
+          label: '장면 내레이션이 원고를 모두 담음',
+          ok: coverage <= 0.1,
+          fix: `장면 내레이션 합계(${nar}자)가 원고(${script}자)와 10% 넘게 다릅니다. 빠지거나 겹친 문장이 있는지 확인하세요.`,
+        },
+      ];
+    }
+
+    case 3: {
+      const dna = p.visualDNA;
+      const names = namesInScenes(p.scenes);
+      const missing = [
+        ...names.characters.filter((n) => !dna.characters.some((c) => c.name === n)),
+        ...names.locations.filter((n) => !dna.locations.some((l) => l.name === n)),
+      ];
+      const usedChars = dna.characters.filter((c) => names.characters.includes(c.name));
+      const usedLocs = dna.locations.filter((l) => names.locations.includes(l.name));
+      const cid = (c: { name: string }, field: string) => `s3-character-${pad2(dna.characters.findIndex((x) => x.name === c.name) + 1)}-${field}`;
+      const lid = (l: { name: string }) => `s3-location-${pad2(dna.locations.findIndex((x) => x.name === l.name) + 1)}-desc`;
+      const primaries = usedChars.map((c) => c.colors[0].toLowerCase());
+      const dup = primaries.findIndex((c, i) => primaries.indexOf(c) !== i);
+      const field = (c: (typeof usedChars)[number]) => (['age', 'face', 'hair', 'outfit'] as const).find((f) => !c[f].trim());
+      return [
+        {
+          id: dna.stylePreset === 'custom' ? 's3-custom-style' : 's3-style-preset',
+          label: '화풍 정함',
+          ok: dna.stylePreset !== null && (dna.stylePreset !== 'custom' || dna.customStyle.trim().length >= 10),
+          fix: dna.stylePreset === 'custom' ? '직접 쓰는 화풍 설명을 10자 이상 쓰세요.' : '화풍 프리셋을 고르세요.',
+        },
+        {
+          id: 's3-sync-cards',
+          label: '장면표의 인물·장소가 모두 카드로 있음',
+          ok: missing.length === 0,
+          fix: `카드가 없는 이름: ${missing.join(', ')}. 「장면표에서 카드 맞추기」(s3-sync-cards)를 누르세요.`,
+        },
+        firstFailing(
+          usedChars,
+          (c) => Boolean(field(c)),
+          (i) => ({ id: cid(usedChars[i], field(usedChars[i])!), fix: `${usedChars[i].name} 카드의 나이·얼굴·머리·옷을 모두 채우세요.` }),
+          '인물 카드 채움 (나이·얼굴·머리·옷)',
+          's3-character-list',
+        ),
+        {
+          id: dup < 0 ? 's3-character-list' : cid(usedChars[dup], 'color-1'),
+          label: '인물마다 첫째 대표 색이 다름',
+          ok: dup < 0,
+          fix: dup < 0 ? '' : `${usedChars[dup].name}의 첫째 대표 색이 다른 인물과 같습니다. 구분되는 색으로 바꾸세요.`,
+        },
+        firstFailing(
+          usedLocs,
+          (l) => l.desc.trim().length < 10,
+          (i) => ({ id: lid(usedLocs[i]), fix: `장소 「${usedLocs[i].name}」 설명을 10자 이상 쓰세요(시대, 계절, 주요 사물, 빛).` }),
+          '장소 카드 설명 10자 이상',
+          's3-location-list',
+        ),
+        { id: 's3-negatives', label: '금지 요소 있음', ok: dna.negatives.trim().length > 0, fix: '그림에 넣지 않을 것(글자, 워터마크 등)을 쓰세요.' },
+      ];
+    }
+
     default:
       return [];
   }
@@ -66,11 +250,11 @@ function hasWork(step: StepNo, p: Project): boolean {
     case 3:
       return p.visualDNA.stylePreset !== null || p.visualDNA.characters.length > 0;
     case 4:
-      return p.visualDNA.characters.some((c) => c.refSheet.assetId);
+      return p.visualDNA.characters.some((c) => c.refSheet.file);
     case 5:
-      return p.scenes.some((s) => s.image.assetId);
+      return p.scenes.some((s) => s.image.file);
     case 6:
-      return p.scenes.some((s) => s.audio.assetId);
+      return p.scenes.some((s) => s.audio.file);
     case 7:
       return p.publish.youtubeTitle.length > 0;
   }
@@ -107,12 +291,12 @@ export interface NextAction {
 }
 
 /**
- * "다음 할 일" 한 문장. 띠·브리핑 페이지·작업 기록이 모두 이 문장을 쓴다.
+ * "다음 할 일" 한 문장. 띠·브리핑 페이지가 모두 이 문장을 쓴다.
  * 형식: 무엇이 비었는지 + 어떻게 하는지 (이름표 포함)
  */
-export function nextAction(p: Project): NextAction {
+export function nextAction(p: Project, env: StepEnv): NextAction {
   const step = currentStep(p);
-  if (step === null) return { step: null, text: '모든 단계를 완료했습니다. 묶음을 내려받아 편집하세요.' };
+  if (step === null) return { step: null, text: '모든 단계를 완료했습니다. 작업 폴더의 파일로 영상을 편집하세요.' };
 
   const guide = GUIDES[step];
   if (!guide.implemented) {
@@ -121,7 +305,7 @@ export function nextAction(p: Project): NextAction {
       text: `${step}단계 「${guide.title}」 화면은 아직 준비 중입니다. 여기서 작업을 멈추고 운영자에게 알리세요.`,
     };
   }
-  const failing = checksFor(step, p).find((c) => !c.ok);
+  const failing = checksFor(step, p, env).find((c) => !c.ok);
   if (failing) {
     return { step, text: `${step}단계 「${guide.title}」: ${failing.fix} (이름표 ${failing.id})` };
   }
