@@ -1,0 +1,145 @@
+/**
+ * 프로젝트 하나를 불러오고, 고치고, 2초 뒤 자동 저장한다.
+ * 화면에는 "저장됨 20:41" / "저장 중…" / 오류 문장을 그대로 보여 준다.
+ */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { GUIDES, guideLabel } from '@/guides';
+import { appendLog, clock, nowIso } from '@/lib/project';
+import { checksFor } from '@/lib/steps';
+import { store } from '@/lib/storage';
+import type { Project, StepNo } from '@/types/project';
+
+export type SaveState =
+  | { kind: 'idle' }
+  | { kind: 'pending' }
+  | { kind: 'saved'; at: string }
+  | { kind: 'error'; message: string };
+
+export const AUTOSAVE_MS = 2000;
+
+export function saveStateText(s: SaveState): string {
+  switch (s.kind) {
+    case 'idle':
+      return '변경 없음';
+    case 'pending':
+      return '저장 중…';
+    case 'saved':
+      return `저장됨 ${clock(s.at)}`;
+    case 'error':
+      return `저장 실패: ${s.message}`;
+  }
+}
+
+export function useProject(id: string | undefined) {
+  const [project, setProject] = useState<Project | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>({ kind: 'idle' });
+  const timer = useRef<number | null>(null);
+  const latest = useRef<Project | null>(null);
+
+  // 불러오기
+  useEffect(() => {
+    let alive = true;
+    setProject(null);
+    setLoadError(null);
+    if (!id) return;
+    store.get(id).then((p) => {
+      if (!alive) return;
+      if (p) {
+        latest.current = p;
+        setProject(p);
+      } else {
+        setLoadError(`프로젝트 ${id}를 찾지 못했습니다. 프로젝트 목록에서 다시 고르세요.`);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  const flush = useCallback(async () => {
+    if (timer.current) {
+      window.clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const p = latest.current;
+    if (!p) return;
+    try {
+      await store.save(p);
+      setSaveState({ kind: 'saved', at: p.updatedAt });
+    } catch (err) {
+      setSaveState({ kind: 'error', message: err instanceof Error ? err.message : String(err) });
+    }
+  }, []);
+
+  // 화면을 떠날 때 남은 변경을 바로 저장
+  useEffect(() => {
+    const onHide = () => {
+      if (timer.current) void flush();
+    };
+    window.addEventListener('beforeunload', onHide);
+    return () => {
+      window.removeEventListener('beforeunload', onHide);
+      if (timer.current) void flush();
+    };
+  }, [flush]);
+
+  /** 프로젝트 고치기. 2초 동안 추가 입력이 없으면 저장한다 */
+  const update = useCallback(
+    (fn: (p: Project) => Project) => {
+      setProject((prev) => {
+        if (!prev) return prev;
+        const next = { ...fn(prev), updatedAt: nowIso() };
+        latest.current = next;
+        return next;
+      });
+      setSaveState({ kind: 'pending' });
+      if (timer.current) window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => void flush(), AUTOSAVE_MS);
+    },
+    [flush],
+  );
+
+  /** 작업 기록 남기기 (알림은 사라지지만 기록은 남는다) */
+  const log = useCallback(
+    (event: string, step: StepNo | null = null) => {
+      update((p) => appendLog(p, event, step === null ? null : guideLabel(GUIDES[step])));
+    },
+    [update],
+  );
+
+  /** 단계 완료. 점검을 통과하지 못하면 false와 사유를 돌려준다 */
+  const completeStep = useCallback(
+    (step: StepNo): { ok: true } | { ok: false; reasons: string[] } => {
+      const p = latest.current;
+      if (!p) return { ok: false, reasons: ['프로젝트를 아직 불러오지 못했습니다.'] };
+      const failing = checksFor(step, p).filter((c) => !c.ok);
+      if (failing.length) return { ok: false, reasons: failing.map((c) => c.fix) };
+      update((cur) =>
+        appendLog(
+          { ...cur, progress: { ...cur.progress, [step]: { completedAt: nowIso() } } },
+          `${step}단계 「${GUIDES[step].title}」 완료 — ${GUIDES[step].doneSignal}`,
+          guideLabel(GUIDES[step]),
+        ),
+      );
+      return { ok: true };
+    },
+    [update],
+  );
+
+  /** 완료 취소 (다시 고칠 때) */
+  const reopenStep = useCallback(
+    (step: StepNo) => {
+      update((cur) => {
+        const progress = { ...cur.progress };
+        delete progress[step];
+        return appendLog({ ...cur, progress }, `${step}단계 「${GUIDES[step].title}」 완료를 취소하고 다시 엽니다`, guideLabel(GUIDES[step]));
+      });
+    },
+    [update],
+  );
+
+  return { project, loadError, saveState, update, log, completeStep, reopenStep, flush };
+}
+
+export type ProjectApi = ReturnType<typeof useProject>;

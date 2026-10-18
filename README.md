@@ -1,132 +1,87 @@
-# 스토리 구성 웹학습지
+# 옛이야기 영상 공방
 
-초등학생을 위한 4컷 스토리 구성 웹학습지
+옛이야기 한 편을 **시니어용 유튜브 영상 재료 한 묶음**(내레이션 원고, 장면표, 일관된 그림, 내레이션 음성, SRT 자막, 유튜브 설명문)으로 만드는 1인 제작 웹도구입니다.
 
----
+사람이 쓰든 AI 브라우저 도구(Claude in Chrome)가 쓰든 **같은 화면, 같은 순서로** 끝까지 진행되도록 만들었습니다. 각 단계 화면이 사람에게는 입력 양식이고, AI에게는 작업지시서입니다.
 
-## 서비스 소개
+> 학생용 4컷 스토리 학습지(story-worksheet)에서 갈라져 나온 저장소입니다. 학생용 기능은 원래 저장소에 그대로 있습니다.
 
-**하나의 서비스, 두 가지 모드**
+## 여덟 단계
 
-| 모드 | 대상 | 특징 |
-|------|------|------|
-| 🏫 **학급 모드** | 교사 + 학급 학생 | 교사별 독립 운영, AI 지원 배포 |
-| 🎨 **개인 모드** | 개인 사용자 | 계정 기반, AI 기능 예정 |
+| 단계 | 이름 | 산출물 | 상태 |
+| --- | --- | --- | --- |
+| 0 | 프로젝트 설정 | 출처·길이 확정 | M1 완료 |
+| 1 | 이야기 다시 쓰기 | 내레이션 원고 | M2 |
+| 2 | 장면 나누기 | 장면표 | M2 |
+| 3 | 비주얼 DNA | 인물·장소 카드 | M2 |
+| 4 | 기준 이미지 | 인물 기준 시트 승인 | M3 |
+| 5 | 장면 이미지 | 장면 그림, 움직임 클립 | M3 |
+| 6 | 내레이션 음성 | 장면별 음성 | M3 |
+| 7 | 점검·내보내기 | 자막·설명문·ZIP | M3 |
 
-```
-          ┌─────────────────────────────────┐
-          │      📱 통합 랜딩 페이지        │
-          │     story-worksheet.github.io   │
-          └───────────────┬─────────────────┘
-                          │
-          ┌───────────────┴───────────────┐
-          │                               │
-          ▼                               ▼
-    ┌───────────┐                  ┌───────────┐
-    │ 🏫 학급   │                  │ 🎨 개인   │
-    │  모드     │                  │  모드     │
-    └───────────┘                  └───────────┘
-    별도 저장소                    이 저장소
-```
+## 주소
 
----
+| 주소 | 화면 |
+| --- | --- |
+| `/projects` | 프로젝트 목록, 새로 만들기, 백업 JSON 불러오기 |
+| `/p/:id` | 지금 해야 할 단계로 이동 |
+| `/p/:id/step/0` ~ `/p/:id/step/7` | 단계별 작업 화면 |
+| `/p/:id/brief` | 브라우저 AI용 작업 브리핑 (전체 지침 + 진행 상태 + 다음 할 일) |
+| `/p/:id/export` | 내보내기 (M1: JSON 백업) |
 
-## 저장소 구조
+## 브라우저 AI로 작업할 때
 
-이 프로젝트는 **두 개의 GitHub 저장소**로 운영됩니다:
+1. `/p/{프로젝트ID}/brief`를 먼저 열어 읽습니다. 「브리핑 전체 복사」로 한 번에 가져갈 수도 있습니다.
+2. 화면 위쪽 쪽빛 띠 **「다음 할 일」** 한 문장만 따라갑니다.
+3. 요소는 `data-testid` 이름표로 찾습니다.
+4. 「화면 준비 중」 단계에 도착하면 멈추고 운영자에게 알립니다.
 
-### 📦 story-worksheet (이 저장소)
+### 이름표 규칙 (`src/lib/testid.ts`)
 
-```
-story-worksheet/
-├── landing/              # 통합 랜딩 페이지 (GitHub Pages)
-├── personal-app/         # 개인 모드 (React + Supabase)
-├── docs/                 # 기획 문서 아카이브
-├── README.md             # 이 파일
-├── HISTORY.md            # 개발 히스토리
-└── DEVELOPMENT_STRATEGY.md  # 개발 전략
-```
+- 단계 안 요소: `s{단계}-{대상}[-{두 자리 번호}][-{항목}]` — 예: `s0-title`, `s5-scene-12-upload`
+- 화면 공통 요소: `app-{대상}` — 예: `app-next-action`, `app-nav-step-3`, `app-guide-panel`, `app-save-status`, `app-log`
+- 단계 완료 버튼: `s{단계}-complete`, 완료 취소: `s{단계}-reopen`, 잠긴 이유: `app-complete-locked-reason`
 
-### 📦 [story-worksheet-classroom](https://github.com/plusiam/story-worksheet-classroom)
+이름표는 한 번 정하면 바꾸지 않습니다. 바꿔야 하면 `src/guides/index.ts`의 지침 버전을 올립니다.
 
-학급 모드 전용 저장소 (GAS 코드)
-
-- 교사가 AI에게 저장소 보여주고 설치 요청 가능
-- 자세한 내용은 해당 저장소 참조
-
----
-
-## 빠른 시작
-
-### 학급 모드
-
-**[story-worksheet-classroom 저장소](https://github.com/plusiam/story-worksheet-classroom)** 참조
-
-```
-1. 템플릿 스프레드시트 접속
-2. 파일 > 사본 만들기
-3. 확장 프로그램 > Apps Script > 배포 > 새 배포
-4. 웹앱 URL 접속 → 초기 설정 마법사 완료
-```
-
-💡 **AI 도움받기**: 저장소의 `SETUP-WITH-AI.md` 가이드 참조
-
-### 개인 모드
+## 개발
 
 ```bash
-cd personal-app
 npm install
-cp .env.example .env.local   # Supabase 정보 입력
-npm run dev
+npm run dev          # http://localhost:5173
+npm run build        # 타입 검사 + 빌드
+npm run lint
+npm run test:e2e     # M1 관문 점검 (Playwright)
 ```
 
----
+Playwright 브라우저를 따로 받지 않으려면 `CHROMIUM_PATH=/경로/chrome npm run test:e2e`로 이미 설치된 Chromium을 지정합니다.
 
-## 기술 스택
+## 저장 방식
 
-| 모드 | 기술 |
-|------|------|
-| 학급 모드 | Google Apps Script + Spreadsheet |
-| 개인 모드 | React + TypeScript + Supabase + Vercel |
-| 랜딩 페이지 | HTML + CSS (GitHub Pages) |
+- **지금(M1)**: 이 브라우저에만 저장합니다(localStorage). 로그인이 필요 없습니다. 다른 기기로 옮기거나 기록을 지우기 전에는 내보내기에서 **JSON 백업**을 받아 두세요.
+- **다음**: Supabase(`projects` 테이블 + 비공개 `assets` 버킷). 스키마는 `supabase/migrations/001_projects.sql`에 준비되어 있고, `src/lib/storage.ts`의 `store` 한 줄을 바꿔 연결합니다.
 
----
+## 폴더 구조
 
-## 개발 현황
+```
+src/
+├── types/project.ts       프로젝트 JSON 스키마 (schemaVersion 1.0)
+├── guides/                단계별 AI 작업지침 (7칸 양식, 버전 관리)
+├── lib/
+│   ├── steps.ts           품질 점검, 단계 상태, 「다음 할 일」 문장
+│   ├── storage.ts         저장소 계층 (지금은 브라우저 저장)
+│   ├── brief.ts           작업 브리핑 글 생성
+│   ├── testid.ts          이름표 규칙
+│   ├── prompts/           이미지·영상 프롬프트 템플릿 (M2·M3에서 손봄)
+│   └── export/            자막·PDF·JSON 내보내기 (M3에서 손봄)
+├── hooks/useProject.ts    불러오기, 2초 자동 저장, 작업 기록, 단계 완료
+├── components/            화면 틀 (단계 목록, 지침 패널, 다음 할 일 띠, 작업 기록, 점검표)
+├── steps/                 단계별 작업 화면
+└── pages/                 주소별 화면
+```
 
-| 상태 | 항목 |
-|:----:|------|
-| ✅ | 학급 모드 MVP |
-| ✅ | 개인 모드 프로젝트 구조 |
-| ✅ | 개인 모드 Supabase 스키마 |
-| ✅ | 통합 랜딩 페이지 |
-| ✅ | 저장소 분리 |
-| ⬜ | 개인 모드 MVP 구현 |
-| ⬜ | AI 이미지 생성 (개인 모드) |
-| ⬜ | 그림책 내보내기 |
+## 콘텐츠 원칙
 
----
-
-## 문서
-
-| 문서 | 내용 |
-|------|------|
-| [HISTORY.md](./HISTORY.md) | 개발 히스토리 (과거 논의) |
-| [DEVELOPMENT_STRATEGY.md](./DEVELOPMENT_STRATEGY.md) | 저장소 분리 전략 |
-| [personal-app/README.md](./personal-app/README.md) | 개인 모드 상세 |
-| [docs/](./docs/) | 기획 문서 아카이브 |
-
----
-
-## 기여하기
-
-### 개인 모드 관련
-이 저장소에 이슈/PR 등록
-
-### 학급 모드 관련
-[story-worksheet-classroom](https://github.com/plusiam/story-worksheet-classroom) 저장소에 이슈/PR 등록
-
----
-
-**버전**: 3.0.0
-**최종 수정**: 2026-01-17
+- 줄거리만 빌린 전래 민담을 운영자의 문장으로 다시 쓰거나 순수 창작합니다. 시판 그림책의 문장·그림은 쓰지 않습니다.
+- 화풍은 특정 스튜디오·작가 이름이 아니라 민화풍, 수묵담채, 그림책 수채화 같은 표현으로 지정합니다.
+- 유튜브에 올릴 때 AI 사용을 공개하고, 건강·금융 조언은 넣지 않습니다.
