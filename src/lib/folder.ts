@@ -176,3 +176,6 @@ export async function scanFolderProjects(): Promise<{ folder: string; json: stri
   }
   return found;
 }
+
+/** 사용자가 연결·허용한 작업 폴더만 반환한다. 권한 창을 자동으로 열지 않는다. */
+export async function getReadyWorkspaceRoot(): Promise<FileSystemDirectoryHandle | null> { return readyRoot(); }

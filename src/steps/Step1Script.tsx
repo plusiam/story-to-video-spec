@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom';
+import { authoringOf } from '@/lib/authoring';
 import { AiAssist } from '@/components/AiAssist';
 import type { ProjectApi } from '@/hooks/useProject';
 import { rewriteRequest } from '@/lib/aiRequests';
@@ -19,6 +21,9 @@ const FLAG_LABEL = { long: '긴 문장', latin: '영어', digit: '숫자' } as c
 /** 1단계 이야기 다시 쓰기 */
 export function Step1Script({ project, api }: { project: Project; api: ProjectApi }) {
   const p = project;
+  const a = authoringOf(p);
+  const narrating = a.scriptMode === 'original_narration';
+  const optionalOutline = narrating || Boolean(a.episode.seriesId);
   const locked = Boolean(p.progress[1]);
   const { target, min, max } = targetRange(p.target.durationSec);
   const n = charCount(p.script.fullText);
@@ -33,12 +38,17 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
 
   return (
     <div className="space-y-8">
+      <p className="rounded-md border border-paper-line bg-paper p-3 text-sm" data-testid="s1-authoring-note">
+        <Link className="text-jjok underline" to={`/p/${p.id}/source`}>원문·분석</Link>의 PDF·분석은 제작 원고와 별도입니다.
+        {narrating ? ' 원문 낭독 모드: 분량·문장 길이는 참고이며 권리와 검토 본문 일치를 확인합니다.' : ' 각색·창작 모드: 기존 낭독 원고 점검을 사용합니다.'}
+        <Link className="ml-2 text-jjok underline" to={`/p/${p.id}/serial`}>회차 기록 남기기</Link>
+      </p>
       <fieldset disabled={locked} className="max-w-prose space-y-3">
-        <legend className="mb-1 font-sans text-sm font-bold">기승전결 뼈대</legend>
+        <legend className="mb-1 font-sans text-sm font-bold">{optionalOutline ? '작업용 구간 요약(선택)' : '기승전결 뼈대'}</legend>
         {OUTLINE_LABELS.map((o, i) => (
           <div key={o.label}>
             <label htmlFor={tid(1, 'outline', i + 1)} className="field-label">
-              {o.label} <span className="font-normal text-ink-faint">{o.hint}</span>
+              {optionalOutline ? `구간 ${i + 1}` : o.label} <span className="font-normal text-ink-faint">{optionalOutline ? '연재·원문 구조를 네 구간으로 강제하지 않습니다' : o.hint}</span>
             </label>
             <input
               id={tid(1, 'outline', i + 1)}
@@ -66,7 +76,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
         </div>
       </fieldset>
 
-      {!locked && (
+      {!locked && !narrating && (
         <AiAssist
           prefix="s1"
           title="Aside·외부 AI로 스토리 만들기·다듬기"
@@ -78,7 +88,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
             const r = parseStoryInput(text);
             if (!r.value) return r.errors;
             const v = r.value;
-            api.update((cur) => appendLog({ ...cur, script: { ...cur.script, ...v, ownWordingConfirmed: false } }, `대화 원고를 반영했습니다 (${charCount(v.fullText)}자, 사람 확인은 미완료)`, 'GUIDE-S1 v1.2'));
+            api.update((cur) => appendLog({ ...cur, script: { ...cur.script, ...v, ownWordingConfirmed: false } }, `대화 원고를 반영했습니다 (${charCount(v.fullText)}자, 사람 확인은 미완료)`, 'GUIDE-S1 v1.3'));
             return null;
           }}
         />
@@ -120,7 +130,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
 
       <section aria-labelledby="s1-flags-heading" data-testid={tid(1, 'flags')} data-count={flags.length}>
         <h2 id="s1-flags-heading" className="mb-2 font-sans text-sm font-bold">
-          문장 점검 {flags.length === 0 ? '— 고칠 문장 없음' : `— ${flags.length}곳`}
+          {narrating ? '원문 발음·문장 참고 점검' : '문장 점검'} {flags.length === 0 ? '— 고칠 문장 없음' : `— ${flags.length}곳`}
         </h2>
         {flags.length > 0 && (
           <ol className="space-y-1.5 text-sm">
@@ -135,7 +145,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
         )}
       </section>
 
-      <label className="flex max-w-prose items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
+      {narrating ? <p className="text-sm text-ink-soft">원문 낭독은 원문·분석 화면의 권리 확인과 검토 본문 일치를 기준으로 합니다. 위 점검을 이유로 원문을 임의로 고치지 않습니다.</p> : <label className="flex max-w-prose items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
         <input
           type="checkbox"
           checked={p.script.ownWordingConfirmed}
@@ -148,7 +158,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
           <span className="block font-semibold">출판된 책의 문장을 옮기지 않았습니다</span>
           <span className="block text-[13px] text-ink-soft">원고를 처음부터 끝까지 읽고 확인합니다. 원고를 새로 반영하면 이 확인은 풀립니다.</span>
         </span>
-      </label>
+      </label>}
     </div>
   );
 }

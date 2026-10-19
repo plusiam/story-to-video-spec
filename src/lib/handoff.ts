@@ -123,7 +123,9 @@ function handoffScene(sc: SceneRecord, i: number): HandoffScene {
 /** 0~3단계 완료 기록과 품질 점검으로 인계 준비 상태를 판정한다 */
 function readinessOf(p: Project): StoryToVideoHandoff['readiness'] {
   const pending: number[] = [];
+  if (p.authoring?.scriptMode === 'original_narration') pending.push(1);
   const issues: string[] = [];
+  if (p.authoring?.scriptMode === 'original_narration') issues.push('원문 낭독의 권리 기록은 handoff 1.0에서 표현하지 않습니다. 회차 기록 ZIP으로 권리 근거를 함께 보관하고 하류 계약을 확인하세요. 인계 상태는 초안으로 유지합니다.');
   for (const step of READINESS_STEPS) {
     const title = GUIDES[step]?.title ?? '';
     const head = `${step}단계 「${title}」`;
@@ -145,7 +147,7 @@ function readinessOf(p: Project): StoryToVideoHandoff['readiness'] {
       stepOk = false;
       issues.push(`${head}: 점검을 실행하지 못했습니다. 프로젝트 내용을 확인하세요.`);
     }
-    if (!stepOk) pending.push(step);
+    if (!stepOk && !pending.includes(step)) pending.push(step);
   }
   return { status: pending.length === 0 ? 'ready' : 'draft', pendingSteps: pending, issues };
 }

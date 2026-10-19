@@ -1,6 +1,7 @@
 /**
  * 프로젝트 생성·시간·로그 도우미
  */
+import { authoringErrors, authoringOf } from '@/lib/authoring';
 import { SCHEMA_VERSION, type Project, type LogEntry } from '@/types/project';
 
 /** 한국 시간(+09:00) ISO 문자열. 작업 기록이 운영자 시계와 같게 보이도록 한다 */
@@ -123,6 +124,7 @@ export function validateProjectJson(raw: unknown): { project: Project | null; er
   }
   if (!Array.isArray(p.scenes)) errors.push('scenes(배열)가 없습니다.');
   if (!Array.isArray(p.log)) errors.push('log(배열)가 없습니다.');
+  if (p.authoring !== undefined) errors.push(...authoringErrors(p.authoring));
   return errors.length ? { project: null, errors } : { project: p as unknown as Project, errors };
 }
 
@@ -131,7 +133,9 @@ export function invalidateEditedSteps(previous: Project, candidate: Project): Pr
   const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
   const sourceChanged = changed([previous.source.type, previous.source.note], [candidate.source.type, candidate.source.note]);
   const scriptChanged = changed([previous.script.outline, previous.script.tone, previous.script.fullText], [candidate.script.outline, candidate.script.tone, candidate.script.fullText]);
-  let from = 8;
+  const oldAuthoring = authoringOf(previous), newAuthoring = authoringOf(candidate);
+  const sourceWorkChanged = changed([oldAuthoring.scriptMode, oldAuthoring.rights, oldAuthoring.material?.id, oldAuthoring.material?.revision, oldAuthoring.material?.reviewConfirmed], [newAuthoring.scriptMode, newAuthoring.rights, newAuthoring.material?.id, newAuthoring.material?.revision, newAuthoring.material?.reviewConfirmed]);
+  let from = sourceWorkChanged ? 0 : 8;
   if (sourceChanged || changed(previous.target, candidate.target) || previous.title !== candidate.title || previous.source.noCommercialBookConfirmed !== candidate.source.noCommercialBookConfirmed) from = 0;
   if (scriptChanged || previous.script.ownWordingConfirmed !== candidate.script.ownWordingConfirmed) from = Math.min(from, 1);
   if (changed(previous.scenes, candidate.scenes)) from = Math.min(from, 2);

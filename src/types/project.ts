@@ -1,3 +1,5 @@
+import type { AuthoringData } from './authoring';
+
 /**
  * 옛이야기 영상 공방 — 프로젝트 데이터 모델 (schemaVersion 1.1)
  *
@@ -82,6 +84,8 @@ export interface LogEntry {
 
 export interface Project {
   schemaVersion: typeof SCHEMA_VERSION;
+  /** 원문·분석·시리즈 작업 확장. 예전 백업에는 없어도 된다. */
+  authoring?: AuthoringData;
   id: string;
   title: string;
   createdAt: string;

@@ -10,7 +10,7 @@ import { tid } from '@/lib/testid';
 import { characterNames, namesInScenes } from '@/lib/text';
 import type { CharacterCard, LocationCard, Project, StylePreset } from '@/types/project';
 
-const GUIDE = 'GUIDE-S3 v1.2';
+const GUIDE = 'GUIDE-S3 v1.3';
 
 const CHARACTER_FIELDS: { key: keyof Pick<CharacterCard, 'age' | 'face' | 'hair' | 'outfit' | 'props' | 'elementName'>; label: string; placeholder: string }[] = [
   { key: 'age', label: '나이대', placeholder: '예: 서른 살 남짓' },

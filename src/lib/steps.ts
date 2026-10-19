@@ -4,6 +4,7 @@
  * 이 파일의 결과가 화면 위쪽 띠·단계 목록·브리핑 페이지에 똑같이 쓰인다.
  * 사람과 브라우저 AI가 같은 문장을 읽게 하기 위해서다.
  */
+import { authoringOf } from '@/lib/authoring';
 import { GUIDES } from '@/guides';
 import type { FolderState } from '@/lib/folder';
 import { pad2 } from '@/lib/testid';
@@ -58,6 +59,9 @@ function firstFailing<T>(
 /** 단계별 품질 점검. 아직 화면이 없는 단계는 "준비 중" 점검 하나만 돌려준다 */
 export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
   const guide = GUIDES[step];
+  const authoring = authoringOf(p);
+  const narrating = authoring.scriptMode === 'original_narration';
+  const rightsOk = authoring.rights.confirmed && authoring.rights.status !== 'unknown' && authoring.rights.basis.trim().length > 0;
   if (!guide.implemented) {
     return [
       {
@@ -76,8 +80,8 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
         { id: 's0-title', label: '제목 있음', ok: p.title.trim().length > 0 && p.title !== '제목 없는 옛이야기', fix: '영상 제목을 입력하세요.' },
         { id: 's0-source-type', label: '원작 유형 선택됨', ok: p.source.type !== null, fix: '전래 민담 또는 순수 창작을 고르세요.' },
         { id: 's0-source-note', label: '출처 메모 10자 이상', ok: p.source.note.trim().length >= 10, fix: '줄거리를 어디서 알게 되었는지 10자 이상 적으세요.' },
-        { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
-        { id: 's0-duration-min', label: '목표 길이 3~15분', ok: minutes >= 3 && minutes <= 15, fix: '목표 길이를 3분에서 15분 사이로 정하세요.' },
+        narrating ? { id: 'app-source-rights-confirm', label: '원문 이용 권리 확인', ok: rightsOk, fix: '원문·분석 화면에서 이용 권리의 근거와 작가 확인을 남기세요.' } : { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
+        { id: 's0-duration-min', label: narrating ? '원문 낭독 목표 길이(양수)' : '목표 길이 3~15분', ok: Number.isFinite(minutes) && (narrating ? minutes > 0 : minutes >= 3 && minutes <= 15), fix: narrating ? '원문 낭독 목표 길이는 0보다 큰 분으로 정하세요. 추정 분량은 참고 정보입니다.' : '목표 길이를 3분에서 15분 사이로 정하세요.' },
       ];
     }
 
@@ -91,14 +95,14 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
       return [
         {
           id: emptyOutline < 0 ? 's1-outline-01' : `s1-outline-${pad2(emptyOutline + 1)}`,
-          label: '기승전결 뼈대 4줄',
-          ok: emptyOutline < 0,
+          label: narrating || authoring.episode.seriesId ? '구간 요약(원문·연재는 선택)' : '기승전결 뼈대 4줄',
+          ok: narrating || Boolean(authoring.episode.seriesId) || emptyOutline < 0,
           fix: `뼈대 ${['기', '승', '전', '결'][Math.max(0, emptyOutline)]} 줄을 채우세요.`,
         },
         {
           id: 's1-full-text',
-          label: `원고 분량 ${min.toLocaleString('ko-KR')}~${max.toLocaleString('ko-KR')}자`,
-          ok: n >= min && n <= max,
+          label: narrating ? '원문 낭독 본문 있음(분량은 참고)' : `원고 분량 ${min.toLocaleString('ko-KR')}~${max.toLocaleString('ko-KR')}자`,
+          ok: narrating ? n >= 100 : n >= min && n <= max,
           fix:
             n === 0
               ? '원고를 쓰거나, AI 요청문(s1-copy-request)으로 받은 원고를 붙여 넣으세요(s1-paste).'
@@ -106,21 +110,21 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
         },
         {
           id: 's1-flags',
-          label: `긴 문장 없음 (${SENTENCE_MAX}자 이하)`,
-          ok: long.length === 0,
+          label: narrating ? '긴 문장 점검은 원문 낭독 참고 경고' : `긴 문장 없음 (${SENTENCE_MAX}자 이하)`,
+          ok: narrating || long.length === 0,
           fix: `${long.map((f) => f.sentenceNo).slice(0, 5).join(', ')}번째 문장 등 ${long.length}개가 ${SENTENCE_MAX}자를 넘습니다. 원고 아래 표시된 문장을 둘로 나누세요.`,
         },
         {
           id: 's1-flags',
-          label: '영어·숫자 표기 없음',
-          ok: notation.length === 0,
+          label: narrating ? '영어·숫자는 원문 유지·발음 확인 대상' : '영어·숫자 표기 없음',
+          ok: narrating || notation.length === 0,
           fix: `${notation.map((f) => f.sentenceNo).slice(0, 5).join(', ')}번째 문장에 영어나 숫자가 있습니다. 소리 나는 대로 한글로 바꾸세요.`,
         },
         {
           id: 's1-own-wording',
-          label: '원작 문장을 옮기지 않음 확인',
-          ok: p.script.ownWordingConfirmed,
-          fix: '원고를 다시 읽고, 출판된 책의 문장을 옮긴 곳이 없으면 확인란에 체크하세요.',
+          label: narrating ? '권리 확인·검토 원문과 일치' : '원작 문장을 옮기지 않음 확인',
+          ok: narrating ? rightsOk && (!authoring.material || (authoring.material.reviewConfirmed && authoring.material.reviewedText.replace(/\s/g, '') === p.script.fullText.replace(/\s/g, ''))) : p.script.ownWordingConfirmed,
+          fix: narrating ? '원문·분석에서 권리와 추출문을 사람이 확인하고, 검토 본문을 제작 원고로 복사하세요. 내용이 다르면 각색 모드로 바꾸세요.' : '원고를 다시 읽고, 출판된 책의 문장을 옮긴 곳이 없으면 확인란에 체크하세요.',
         },
       ];
     }
@@ -302,6 +306,7 @@ export function nextAction(p: Project, env: StepEnv): NextAction {
 
   const guide = GUIDES[step];
   if (step === 4 && [0, 1, 2, 3].every((n) => isComplete(n as StepNo, p))) {
+    if (p.authoring?.scriptMode === 'original_narration') return { step: null, text: '원문 낭독 설정을 마쳤습니다. 시리즈·회차에서 권리 근거와 회차 기록을 ZIP으로 보관하세요. handoff 1.0은 원문 권리 표현이 없어 초안으로 유지합니다.' };
     return { step: null, text: '스토리·장면표·캐릭터 설정을 마쳤습니다. 내보내기에서 handoff.json을 복사하거나 내려받아 제작 담당에게 전달하세요. 유료 생성은 별도 확인이 필요합니다.' };
   }
   if (!guide.implemented) {

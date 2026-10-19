@@ -188,7 +188,7 @@ function requireObject(value: unknown, root: string): { obj: Obj } | { error: st
 
 const SETTINGS_KEYS = ['title', 'sourceType', 'sourceNote', 'durationMin', 'series'] as const;
 
-export function parseSettingsInput(text: string): ParseResult<SettingsInput> {
+export function parseSettingsInput(text: string, options: { allowLongDuration?: boolean } = {}): ParseResult<SettingsInput> {
   const root = 'settings';
   const parsed = extractStrictJson(text, root);
   if (!parsed.ok) return { value: null, errors: [parsed.error] };
@@ -223,8 +223,8 @@ export function parseSettingsInput(text: string): ParseResult<SettingsInput> {
       errors.push(`${root}.durationMin: 따옴표 없는 숫자(분)여야 합니다(받은 값: ${typeName(d)}).`);
     } else if (!Number.isFinite(d)) {
       errors.push(`${root}.durationMin: 유한한 숫자여야 합니다.`);
-    } else if (d < DURATION_MIN || d > DURATION_MAX) {
-      errors.push(`${root}.durationMin: ${DURATION_MIN}~${DURATION_MAX}분 사이여야 합니다(받은 값 ${d}).`);
+    } else if (options.allowLongDuration ? d <= 0 : d < DURATION_MIN || d > DURATION_MAX) {
+      errors.push(options.allowLongDuration ? `${root}.durationMin: 0보다 큰 분이어야 합니다.` : `${root}.durationMin: ${DURATION_MIN}~${DURATION_MAX}분 사이여야 합니다(받은 값 ${d}).`);
     } else {
       durationMin = d;
     }
