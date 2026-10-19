@@ -1,3 +1,4 @@
+import { audioErrors } from '@/lib/audioRules';
 import { mediaErrors } from '@/lib/mediaRules';
 import type { AuthoringData, EpisodeWorkingNotes } from '@/types/authoring';
 import type { Project } from '@/types/project';
@@ -36,8 +37,9 @@ export function authoringErrors(raw: unknown): string[] {
     if (d.findings.some(f => !obj(f) || !text(f.id) || !text(f.text) || !text(f.quote) || !['source', 'character_claim', 'memory', 'interpretation', 'proposal'].includes(String(f.kind)) || !(f.page === null || Number.isInteger(f.page)))) return fail();
     if ([...d.characters, ...d.locations].some(c => !obj(c) || !text(c.name) || !text(c.description))) return fail();
   }
-  if (a.media !== undefined) return mediaErrors(a.media);
-  return [];
+  const mediaProblems = a.media !== undefined ? mediaErrors(a.media) : [];
+  const audioProblems = a.audio !== undefined ? audioErrors(a.audio) : [];
+  return [...mediaProblems, ...audioProblems];
 }
 
 /** 대화에서 만든 회차 노트만 읽는다. 확정자·권리·진행·승인 값은 형식상 받지 않는다. */

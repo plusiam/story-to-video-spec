@@ -7,7 +7,7 @@ import { useProject } from '@/hooks/useProject';
 import { GENSPARK_MODELS, buildShotCard, editReference, emptyShot, isResultStale, makeResult, mediaOf, modelInfo, patchMedia, shotOf, suggestedRefName } from '@/lib/gensparkCard';
 import { newId } from '@/lib/project';
 import { pad2 } from '@/lib/testid';
-import type { GensparkModel, MediaReference, ShotPlan } from '@/types/authoring';
+import type { GensparkModel, MediaReference, ShotPlacement, ShotPlan } from '@/types/authoring';
 import { PANEL_LABEL, type Project, type SceneRecord } from '@/types/project';
 import { LoadingOrError } from './LoadingOrError';
 
@@ -18,11 +18,15 @@ import { LoadingOrError } from './LoadingOrError';
 export function ImagesPage() {
   const { id } = useParams();
   const api = useProject(id);
+  const [onlyNeeded, setOnlyNeeded] = useState(true);
   const p = api.project;
   if (!p) return <LoadingOrError error={api.loadError} />;
   const media = mediaOf(p);
   const info = modelInfo(media.model);
   const update = (fn: (cur: Project) => Project) => api.update(fn);
+  const placementOf = (sceneId: string): ShotPlacement => shotOf(media, sceneId).placement ?? 'undecided';
+  const counts = { undecided: 0, new: 0, reuse: 0, crop: 0, title: 0 } as Record<ShotPlacement, number>;
+  for (const sc of p.scenes) counts[placementOf(sc.id)]++;
 
   return (
     <div className="min-h-screen">
@@ -34,6 +38,7 @@ export function ImagesPage() {
           <p className="mt-2 text-sm text-ink-soft">
             장면마다 Genspark에 붙여 넣을 컷 카드와 첨부할 기준 이미지 순서를 만듭니다. 이 앱은 Genspark에 접속하거나 생성·결제하지 않습니다.
             작가가 직접 붙여 넣어 생성하고(크레딧 사용), 고른 결과를 여기에 기록합니다. 단계 완료와 인계 파일(handoff)은 바꾸지 않습니다.
+            장면 수가 그림 수는 아닙니다. 오디오 길이가 나온 뒤 장면마다 새 그림이 필요한지 정하고, 필요한 장면만 카드를 만드세요(<Link className="text-jjok hover:underline" to={`/p/${p.id}/audio`} data-testid="app-images-audio-link">오디오 화면</Link>).
           </p>
         </header>
 
@@ -67,7 +72,21 @@ export function ImagesPage() {
           </p>
           {p.scenes.length === 0 ? (
             <p className="text-sm" data-testid="app-images-no-scenes">2단계 장면표가 비어 있습니다. <Link className="text-jjok hover:underline" to={`/p/${p.id}/step/2`}>2단계로 가기</Link></p>
-          ) : p.scenes.map((sc, i) => <ShotCardView key={sc.id} p={p} scene={sc} n={i + 1} update={update} />)}
+          ) : (
+            <>
+              <div className="rounded-md border border-paper-line p-3 text-sm" data-testid="app-images-placement-summary">
+                <p>
+                  새 그림 {counts.new}장면 · 미정 {counts.undecided}장면 · 기존 그림 유지 {counts.reuse}장면 · 크롭·느린 이동 {counts.crop}장면 · 제목·전환 {counts.title}장면
+                </p>
+                <label className="mt-2 flex items-center gap-2">
+                  <input type="checkbox" checked={onlyNeeded} onChange={(e) => setOnlyNeeded(e.target.checked)} data-testid="app-images-only-needed" />
+                  새 그림이 필요하거나 아직 정하지 않은 장면만 보기
+                </label>
+                <p className="mt-1 text-xs text-ink-soft">장면마다 「이 장면의 화면」을 정하는 이유는 그림이 필요 없는 장면의 컷 카드를 만들지 않으려는 것입니다. 정하지 않은 장면은 기존처럼 모두 보입니다.</p>
+              </div>
+              {p.scenes.map((sc, i) => (onlyNeeded && ['reuse', 'crop', 'title'].includes(placementOf(sc.id)) ? null : <ShotCardView key={sc.id} p={p} scene={sc} n={i + 1} update={update} />))}
+            </>
+          )}
         </section>
       </main>
     </div>
@@ -167,6 +186,25 @@ function ShotCardView({ p, scene, n, update }: { p: Project; scene: SceneRecord;
         <p className="font-semibold">작가 참고 (카드에 넣지 않음)</p>
         <p>감정: {scene.emotion || '(비어 있음)'}</p>
         <p className="text-ink-soft">내레이션: {scene.narration.slice(0, 120) || '(비어 있음)'}{scene.narration.length > 120 ? '…' : ''}</p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-[8rem_1fr]">
+        <label className="field-label" htmlFor={`${scene.id}-placement`}>이 장면의 화면</label>
+        <select id={`${scene.id}-placement`} className="input" value={shot.placement ?? 'undecided'} onChange={(e) => setShot({ placement: e.target.value as ShotPlacement })} data-testid={t('placement')}>
+          <option value="undecided">아직 정하지 않음</option>
+          <option value="new">새 그림이 필요함</option>
+          <option value="reuse">기존 그림 유지</option>
+          <option value="crop">크롭·느린 이동</option>
+          <option value="title">제목·전환 카드</option>
+        </select>
+        {(shot.placement === 'reuse' || shot.placement === 'crop') && (
+          <>
+            <label className="field-label" htmlFor={`${scene.id}-reuse`}>쓰는 그림의 장면</label>
+            <select id={`${scene.id}-reuse`} className="input" value={shot.reuseOfSceneId ?? ''} onChange={(e) => setShot({ reuseOfSceneId: e.target.value })} data-testid={t('reuse-of')}>
+              <option value="">장면을 고르세요</option>
+              {p.scenes.filter((x) => x.id !== scene.id).map((x) => <option key={x.id} value={x.id}>장면 {p.scenes.indexOf(x) + 1}</option>)}
+            </select>
+          </>
+        )}
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {field('pose', '표정·몸짓', '예: 놀라서 손을 입에 댄다')}

@@ -51,6 +51,8 @@ export function mediaErrors(raw: unknown): string[] {
   }
   for (const s of Object.values(raw.shots)) {
     if (!obj(s) || !str(s.pose) || !str(s.light) || !str(s.composition) || !str(s.avoid)) return fail;
+    if (s.placement !== undefined && !['undecided', 'new', 'reuse', 'crop', 'title'].includes(String(s.placement))) return fail;
+    if (s.reuseOfSceneId !== undefined && !str(s.reuseOfSceneId)) return fail;
     if (s.result !== null) {
       const r = s.result;
       if (!obj(r) || !str(r.file) || !str(r.model) || !Number.isInteger(r.attempt) || Number(r.attempt) < 1 || !str(r.reason) || !Array.isArray(r.refsUsed) || !r.refsUsed.every(str) || !str(r.recordedAt)) return fail;

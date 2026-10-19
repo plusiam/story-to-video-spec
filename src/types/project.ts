@@ -17,6 +17,8 @@ export const SCHEMA_VERSION = '1.1' as const;
 
 /** 단계 번호 0~7 */
 export type StepNo = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** 내레이션 음성 서비스. 옛 기록의 typecast도 계속 받는다 */
+export type VoiceService = 'typecast' | 'genspark' | 'other';
 export const STEP_NUMBERS: StepNo[] = [0, 1, 2, 3, 4, 5, 6, 7];
 
 /** 원작 유형: 줄거리만 빌린 전래 민담 / 순수 창작 */
@@ -117,7 +119,7 @@ export interface Project {
 
   scenes: SceneRecord[];
 
-  voice: { service: 'typecast'; voiceName: string; speed: number; pauseSec: number };
+  voice: { service: VoiceService; voiceName: string; speed: number; pauseSec: number };
 
   publish: {
     youtubeTitle: string;

@@ -242,11 +242,11 @@ function hasWork(step: StepNo, p: Project): boolean {
     case 3:
       return p.visualDNA.stylePreset !== null || p.visualDNA.characters.length > 0;
     case 4:
-      return p.visualDNA.characters.some((c) => c.refSheet.file);
+      return (p.authoring?.audio?.blocks.length ?? 0) > 0 || p.scenes.some((s) => s.audio.file);
     case 5:
-      return p.scenes.some((s) => s.image.file);
+      return p.visualDNA.characters.some((c) => c.refSheet.file) || (p.authoring?.media?.references.length ?? 0) > 0;
     case 6:
-      return p.scenes.some((s) => s.audio.file);
+      return p.scenes.some((s) => s.image.file) || Object.keys(p.authoring?.media?.shots ?? {}).length > 0;
     case 7:
       return p.publish.youtubeTitle.length > 0;
   }
@@ -306,8 +306,8 @@ export function nextAction(p: Project, env: StepEnv): NextAction {
 
   const guide = GUIDES[step];
   if (step === 4 && [0, 1, 2, 3].every((n) => isComplete(n as StepNo, p))) {
-    if (p.authoring?.scriptMode === 'original_narration') return { step: null, text: '원문 낭독 설정을 마쳤습니다. 시리즈·회차에서 권리 근거와 회차 기록을 ZIP으로 보관하세요. handoff 1.0은 원문 권리 표현이 없어 초안으로 유지합니다.' };
-    return { step: null, text: '스토리·장면표·캐릭터 설정을 마쳤습니다. 내보내기에서 handoff.json을 복사하거나 내려받아 제작 담당에게 전달하세요. 유료 생성은 별도 확인이 필요합니다.' };
+    if (p.authoring?.scriptMode === 'original_narration') return { step: null, text: '원문 낭독 설정을 마쳤습니다. 다음은 오디오 화면(/p/' + p.id + '/audio)에서 성우와 낭독 블록을 정하고 내레이션부터 만드세요. 그림은 오디오 길이가 나온 뒤 필요한 구간만 만듭니다. 시리즈·회차에서 권리 근거와 회차 기록을 ZIP으로 보관하세요. handoff 1.0은 원문 권리 표현이 없어 초안으로 유지합니다.' };
+    return { step: null, text: '스토리·장면표·캐릭터 설정을 마쳤습니다. 다음은 오디오 화면(/p/' + p.id + '/audio)에서 성우와 낭독 블록을 정해 내레이션부터 만드세요. 그림은 오디오 길이가 나온 뒤 필요한 구간만 만듭니다. 내보내기에서 handoff.json을 복사하거나 내려받아 제작 담당에게 전달할 수도 있습니다. 유료 생성은 별도 확인이 필요합니다.' };
   }
   if (!guide.implemented) {
     return {

@@ -20,7 +20,7 @@ test('빈 프로젝트로 0~7단계를 주소로 이동하고, 단계마다 이�
   for (let n = 0; n <= 7; n++) {
     await page.goto(`/p/${id}/step/${n}`);
     await expect(page.getByTestId(`s${n}-heading`)).toBeVisible();
-    await expect(page.getByTestId('app-guide-panel')).toHaveAttribute('data-guide', new RegExp(`^GUIDE-S${n} v1\\.\\d+$`));
+    await expect(page.getByTestId('app-guide-panel')).toHaveAttribute('data-guide', new RegExp(`^GUIDE-S${n} v[12]\\.\\d+$`));
     await expect(page.getByTestId(`app-nav-step-${n}`)).toHaveAttribute('aria-current', 'step');
     await expect(page.getByTestId(`s${n}-complete`)).toBeDisabled();
     await expect(page.getByTestId('app-complete-locked-reason')).toBeVisible();
@@ -77,7 +77,7 @@ test('브리핑 페이지: 진행 상태, 규칙, 8개 지침, 전체 복사', a
   await expect(page.getByTestId('app-brief-copy')).toHaveText('복사됨');
   const copied = await page.evaluate(() => navigator.clipboard.readText());
   expect(copied).toContain(`# 작업 브리핑`);
-  expect(copied).toContain('[GUIDE-S5 v1.0] 5단계 장면 이미지');
+  expect(copied).toContain('[GUIDE-S5 v2.0] 5단계 기준 이미지');
   expect(copied).toContain('작업 폴더');
 });
 
