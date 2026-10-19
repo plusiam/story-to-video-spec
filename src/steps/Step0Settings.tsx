@@ -1,3 +1,8 @@
+import { Link } from 'react-router-dom';
+import { authoringOf } from '@/lib/authoring';
+import { AiAssist } from '@/components/AiAssist';
+import { parseSettingsInput } from '@/lib/batchInput';
+import { appendLog } from '@/lib/project';
 import type { ProjectApi } from '@/hooks/useProject';
 import { tid } from '@/lib/testid';
 import type { Project, SourceType } from '@/types/project';
@@ -8,18 +13,36 @@ import type { Project, SourceType } from '@/types/project';
  */
 export function Step0Settings({ project, api }: { project: Project; api: ProjectApi }) {
   const p = project;
+  const narrating = authoringOf(p).scriptMode === 'original_narration';
   const minutes = Math.round((p.target.durationSec / 60) * 10) / 10;
   const locked = Boolean(p.progress[0]);
 
   const sourceOptions: { value: SourceType; label: string; hint: string }[] = [
     { value: 'folktale', label: '전래 민담', hint: '줄거리만 빌리고 문장은 새로 씁니다' },
-    { value: 'original', label: '순수 창작', hint: '줄거리부터 직접 만듭니다' },
+    { value: 'original', label: narrating ? '본인·허락받은 원고' : '순수 창작', hint: narrating ? '별도 권리 근거를 확인합니다' : '줄거리부터 직접 만듭니다' },
   ];
 
   return (
     <fieldset disabled={locked} className="max-w-prose space-y-6">
       <legend className="sr-only">프로젝트 설정</legend>
 
+      <p className="field-hint">PDF·권리·작업 방식은 <Link className="text-jjok underline" to={`/p/${p.id}/source`}>원문·분석</Link>, 회차 기록은 <Link className="text-jjok underline" to={`/p/${p.id}/serial`}>시리즈·회차</Link>에서 관리합니다.</p>
+      {!locked && <AiAssist
+        prefix="s0"
+        title="Aside·외부 AI와 정한 설정 한 번에 넣기"
+        note="확인란과 단계 완료는 대신 처리하지 않습니다. 설정을 바꾸면 출처 확인을 다시 받습니다."
+        request={'대화에서 합의한 설정을 다음 JSON으로 정리하세요. 확인·승인 값은 넣지 마세요.\n' + JSON.stringify({ title: p.title, sourceType: p.source.type ?? 'folktale', sourceNote: p.source.note, durationMin: minutes, series: p.target.series }, null, 2)}
+        pasteLabel="설정 JSON을 붙여 넣으세요"
+        applyLabel="설정에 반영"
+        onApply={(text) => {
+          const r = parseSettingsInput(text, { allowLongDuration: narrating });
+          if (!r.value) return r.errors;
+          const v = r.value;
+          api.update((cur) => appendLog({ ...cur, title: v.title, source: { type: v.sourceType, note: v.sourceNote, noCommercialBookConfirmed: false }, target: { ...cur.target, durationSec: Math.round(v.durationMin * 60), series: v.series ?? cur.target.series } }, '설정 JSON을 반영했습니다 (사람 확인은 미완료)', 'GUIDE-S0 v1.3'));
+          return null;
+        }}
+      />}
+      <p className="field-hint">작업 폴더는 선택 사항입니다. 연결하지 않아도 작업할 수 있으며 내보내기에서 JSON 백업을 보관하세요.</p>
       <div>
         <label htmlFor="s0-title" className="field-label">
           영상 제목
@@ -86,7 +109,7 @@ export function Step0Settings({ project, api }: { project: Project; api: Project
         </p>
       </div>
 
-      <label className="flex items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
+      {narrating ? <p className="rounded-md border border-paper-line p-3 text-sm">원문 낭독은 그림책 미사용 확인 대신 원문·분석 화면의 이용 권리와 추출문 확인을 사용합니다. 다른 작품의 권리를 추측하지 않습니다.</p> : <label className="flex items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
         <input
           type="checkbox"
           checked={p.source.noCommercialBookConfirmed}
@@ -102,7 +125,7 @@ export function Step0Settings({ project, api }: { project: Project; api: Project
             줄거리는 빌릴 수 있지만, 출판된 책의 문장·그림·번역문은 저작권 보호를 받습니다.
           </span>
         </span>
-      </label>
+      </label>}
 
       <div className="grid gap-6 sm:grid-cols-2">
         <div>
@@ -112,8 +135,8 @@ export function Step0Settings({ project, api }: { project: Project; api: Project
           <input
             id="s0-duration-min"
             type="number"
-            min={3}
-            max={15}
+            min={narrating ? 0 : 3}
+            max={narrating ? undefined : 15}
             step={0.5}
             className="input tabular-nums"
             value={minutes}

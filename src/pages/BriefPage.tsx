@@ -2,9 +2,11 @@ import { Link, useParams } from 'react-router-dom';
 import { CopyButton } from '@/components/CopyButton';
 import { NextActionBar } from '@/components/NextActionBar';
 import { AppHeader } from '@/components/StudioLayout';
+import { FolderStatus } from '@/components/FolderStatus';
 import { GUIDES, guideLabel } from '@/guides';
+import { useFolder } from '@/hooks/useFolder';
 import { useProject } from '@/hooks/useProject';
-import { WORK_RULES, buildBriefMarkdown } from '@/lib/brief';
+import { WORK_RULES, buildBriefMarkdown, batchInputExamplesText } from '@/lib/brief';
 import { STATUS_LABEL, blockReason, stepStatus } from '@/lib/steps';
 import { appTid } from '@/lib/testid';
 import { STEP_NUMBERS } from '@/types/project';
@@ -17,6 +19,7 @@ import { LoadingOrError } from './LoadingOrError';
 export function BriefPage() {
   const { id } = useParams();
   const api = useProject(id);
+  const { state: folder } = useFolder();
   const p = api.project;
   if (!p) return <LoadingOrError error={api.loadError} />;
 
@@ -30,8 +33,15 @@ export function BriefPage() {
             <p className="text-sm text-ink-soft">작업 브리핑 · 프로젝트 ID {p.id}</p>
             <h1 className="text-[28px] leading-tight">{p.title}</h1>
           </div>
-          <CopyButton text={buildBriefMarkdown(p, window.location.origin)} label="브리핑 전체 복사" testid={appTid('brief-copy')} className="btn-primary" />
+          <CopyButton text={buildBriefMarkdown(p, window.location.origin, { folder })} label="브리핑 전체 복사" testid={appTid('brief-copy')} className="btn-primary" />
         </div>
+
+        <section aria-labelledby="folder-heading" className="mb-8 rounded-lg border border-paper-line bg-paper p-4">
+          <h2 id="folder-heading" className="mb-2 font-sans text-sm font-bold">
+            작업 폴더
+          </h2>
+          <FolderStatus />
+        </section>
 
         <section aria-labelledby="status-heading" className="mb-8">
           <h2 id="status-heading" className="mb-2 text-xl">
@@ -75,6 +85,12 @@ export function BriefPage() {
           </ol>
         </section>
 
+        <section aria-labelledby="batch-heading" className="mb-8">
+          <h2 id="batch-heading" className="mb-2 text-xl">대화 결과 한 번에 넣기</h2>
+          <p className="mb-2 text-sm">형식 예시입니다. 실제 합의한 내용으로 바꾸세요. 확인·승인 값은 가져오지 않습니다.</p>
+          <CopyButton text={batchInputExamplesText()} label="입력 형식 복사" testid={appTid('brief-copy-batch')} />
+          <pre className="mt-2 max-h-96 overflow-auto whitespace-pre-wrap rounded-md border border-paper-line p-3 text-xs" data-testid={appTid('brief-batch-examples')}>{batchInputExamplesText()}</pre>
+        </section>
         <section aria-labelledby="guides-heading">
           <h2 id="guides-heading" className="mb-2 text-xl">
             단계별 지침

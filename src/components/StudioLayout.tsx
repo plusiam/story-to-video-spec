@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { GUIDES } from '@/guides';
 import { saveStateText, type SaveState } from '@/hooks/useProject';
 import { store } from '@/lib/storage';
+import { FolderStatus } from './FolderStatus';
 import { appTid } from '@/lib/testid';
 import type { Project, StepNo } from '@/types/project';
 import { ActivityLog } from './ActivityLog';
@@ -64,7 +65,11 @@ export function AppHeader({ project, saveState }: { project?: Project; saveState
             <span className="min-w-0 truncate text-sm text-ink-soft" data-testid={appTid('project-title')}>
               {project.title}
             </span>
-            <nav aria-label="프로젝트 메뉴" className="ml-auto flex items-center gap-4 text-sm">
+            <nav aria-label="프로젝트 메뉴" className="ml-auto flex flex-wrap items-center gap-3 text-sm">
+              <Link to={`/p/${project.id}/source`} className="font-semibold text-jjok hover:underline" data-testid={appTid('source-link')}>원문·분석</Link>
+              <Link to={`/p/${project.id}/serial`} className="font-semibold text-jjok hover:underline" data-testid={appTid('serial-link')}>시리즈·회차</Link>
+              <Link to={`/p/${project.id}/audio`} className="font-semibold text-jjok hover:underline" data-testid={appTid('audio-link')}>오디오</Link>
+              <Link to={`/p/${project.id}/images`} className="font-semibold text-jjok hover:underline" data-testid={appTid('images-link')}>그림 꾸러미</Link>
               <Link to={`/p/${project.id}/brief`} className="font-semibold text-jjok hover:underline" data-testid={appTid('brief-link')}>
                 작업 브리핑
               </Link>
@@ -85,6 +90,9 @@ export function AppHeader({ project, saveState }: { project?: Project; saveState
           </>
         )}
         {!project && <span className="ml-auto text-xs text-ink-faint">{store.label}</span>}
+        <div className="w-full border-t border-paper-line pt-1.5 lg:w-auto lg:border-0 lg:pt-0">
+          <FolderStatus compact />
+        </div>
       </div>
     </header>
   );

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { FolderStatus } from '@/components/FolderStatus';
 import { AppHeader } from '@/components/StudioLayout';
+import { useFolder } from '@/hooks/useFolder';
+import { scanFolderProjects } from '@/lib/folder';
 import { clock, createEmptyProject, validateProjectJson } from '@/lib/project';
 import { store } from '@/lib/storage';
 import { appTid } from '@/lib/testid';
@@ -66,6 +69,8 @@ export function ProjectsPage() {
             </ul>
           )}
         </section>
+
+        <FolderSection known={items?.map((i) => i.id) ?? []} onImported={(id) => navigate(`/p/${id}`)} />
 
         <ImportBox onImported={(id) => navigate(`/p/${id}`)} />
       </main>
@@ -177,6 +182,87 @@ function ImportBox({ onImported }: { onImported: (id: string) => void }) {
       </div>
       {errors.length > 0 && (
         <ul className="mt-3 list-disc space-y-0.5 rounded-md bg-danger-tint py-2 pl-8 pr-3 text-sm text-danger" role="alert" data-testid={appTid('import-errors')}>
+          {errors.map((e) => (
+            <li key={e}>{e}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/**
+ * 작업 폴더 상태와, 폴더에는 있지만 이 브라우저에는 없는 프로젝트 불러오기
+ * (다른 컴퓨터에서 작업 폴더째 옮겨 왔을 때)
+ */
+function FolderSection({ known, onImported }: { known: string[]; onImported: (id: string) => void }) {
+  const { state } = useFolder();
+  const [found, setFound] = useState<{ folder: string; json: string; id: string; title: string }[]>([]);
+  const [errors, setErrors] = useState<string[]>([]);
+  const knownKey = known.join(',');
+
+  useEffect(() => {
+    if (state?.kind !== 'ready') {
+      setFound([]);
+      return;
+    }
+    let alive = true;
+    scanFolderProjects()
+      .then((list) => {
+        if (!alive) return;
+        const parsed = list.flatMap((f) => {
+          try {
+            const j = JSON.parse(f.json) as { id?: string; title?: string };
+            return j.id && !knownKey.split(',').includes(j.id) ? [{ ...f, id: j.id, title: j.title ?? f.folder }] : [];
+          } catch {
+            return [];
+          }
+        });
+        setFound(parsed);
+      })
+      .catch((e) => alive && setErrors([String(e)]));
+    return () => {
+      alive = false;
+    };
+  }, [state, knownKey]);
+
+  const importOne = async (f: { json: string; folder: string }) => {
+    const { project, errors } = validateProjectJson(JSON.parse(f.json));
+    if (!project) {
+      setErrors(errors.map((e) => `${f.folder}: ${e}`));
+      return;
+    }
+    await store.save(project);
+    onImported(project.id);
+  };
+
+  return (
+    <section aria-labelledby="folder-heading" className="mt-12 rounded-lg border border-paper-line bg-paper p-4">
+      <h2 id="folder-heading" className="mb-2 font-sans text-sm font-bold text-ink-soft">
+        작업 폴더
+      </h2>
+      <p className="mb-3 text-[13px] text-ink-soft">
+        프로젝트마다 하위 폴더를 만들어 project.json과 원고를 저장합니다. 4~6단계의 그림과 음성도 이 폴더에 쌓이고, 편집 프로그램에서 그대로 엽니다.
+      </p>
+      <FolderStatus />
+      {found.length > 0 && (
+        <div className="mt-4">
+          <p className="mb-2 text-sm font-semibold">폴더에는 있지만 이 브라우저에 없는 프로젝트</p>
+          <ul className="space-y-1.5" data-testid={appTid('folder-projects')}>
+            {found.map((f) => (
+              <li key={f.id} className="flex flex-wrap items-center gap-3 text-sm">
+                <span className="font-serif">{f.title}</span>
+                <span className="text-ink-faint">{f.folder}</span>
+                <button type="button" className="btn-quiet px-2.5 py-1 text-xs" onClick={() => void importOne(f)} data-testid={appTid(`folder-import-${f.id}`)}>
+                  불러오기
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {errors.length > 0 && (
+        <ul className="mt-2 list-disc pl-6 text-sm text-danger" role="alert" data-testid={appTid('folder-import-errors')}>
           {errors.map((e) => (
             <li key={e}>{e}</li>
           ))}

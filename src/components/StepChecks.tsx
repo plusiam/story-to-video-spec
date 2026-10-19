@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { GUIDES } from '@/guides';
+import { useFolder } from '@/hooks/useFolder';
 import type { ProjectApi } from '@/hooks/useProject';
 import { clock } from '@/lib/project';
 import { blockReason, checksFor } from '@/lib/steps';
-import { appTid } from '@/lib/testid';
+import { appTid, pad2 } from '@/lib/testid';
 import type { Project, StepNo } from '@/types/project';
 
 /**
@@ -11,7 +12,9 @@ import type { Project, StepNo } from '@/types/project';
  * 점검을 통과하기 전에는 완료 버튼이 잠기고, 잠긴 이유를 버튼 아래 글로 보여 준다.
  */
 export function StepChecks({ step, project, api }: { step: StepNo; project: Project; api: ProjectApi }) {
-  const checks = checksFor(step, project);
+  const { state: folder } = useFolder();
+  const env = { folder };
+  const checks = checksFor(step, project, env);
   const failing = checks.filter((c) => !c.ok);
   const done = project.progress[step];
   const blocked = blockReason(step, project);
@@ -24,8 +27,8 @@ export function StepChecks({ step, project, api }: { step: StepNo; project: Proj
         품질 점검
       </h2>
       <ul className="mb-4 space-y-1.5 text-sm" data-testid={appTid('checks')}>
-        {checks.map((c) => (
-          <li key={c.id} className="flex items-start gap-2" data-testid={appTid(`check-${c.id}`)} data-ok={c.ok}>
+        {checks.map((c, i) => (
+          <li key={`${i}-${c.id}`} className="flex items-start gap-2" data-testid={appTid(`check-${pad2(i + 1)}`)} data-target={c.id} data-ok={c.ok}>
             <span aria-hidden className={`mt-0.5 font-bold ${c.ok ? 'text-celadon' : 'text-ocher'}`}>
               {c.ok ? '✓' : '·'}
             </span>
@@ -59,7 +62,7 @@ export function StepChecks({ step, project, api }: { step: StepNo; project: Proj
             className="btn-primary"
             disabled={locked}
             aria-describedby={locked ? `lock-${step}` : undefined}
-            onClick={() => api.completeStep(step)}
+            onClick={() => api.completeStep(step, env)}
             data-testid={`s${step}-complete`}
           >
             {step}단계 완료
