@@ -2,6 +2,7 @@
  * 프로젝트 생성·시간·로그 도우미
  */
 import { authoringErrors, authoringOf } from '@/lib/authoring';
+import { revokeChangedReferences } from '@/lib/mediaRules';
 import { SCHEMA_VERSION, type Project, type LogEntry } from '@/types/project';
 
 /** 한국 시간(+09:00) ISO 문자열. 작업 기록이 운영자 시계와 같게 보이도록 한다 */
@@ -153,7 +154,7 @@ export function invalidateEditedSteps(previous: Project, candidate: Project): Pr
     const imageChanged = globalStyleChanged || changed({ ...old, refSheet: undefined }, { ...card, refSheet: undefined }) || old?.refSheet.file !== card.refSheet.file;
     return imageChanged && card.refSheet.approved ? { ...card, refSheet: { ...card.refSheet, approved: false } } : card;
   }) };
-  const next = { ...candidate, progress, visualDNA,
+  const next = { ...revokeChangedReferences(previous, candidate), progress, visualDNA,
     source: sourceChanged ? { ...candidate.source, noCommercialBookConfirmed: false } : candidate.source,
     script: scriptChanged ? { ...candidate.script, ownWordingConfirmed: false } : candidate.script,
   };

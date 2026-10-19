@@ -68,6 +68,7 @@ export function AppHeader({ project, saveState }: { project?: Project; saveState
             <nav aria-label="프로젝트 메뉴" className="ml-auto flex flex-wrap items-center gap-3 text-sm">
               <Link to={`/p/${project.id}/source`} className="font-semibold text-jjok hover:underline" data-testid={appTid('source-link')}>원문·분석</Link>
               <Link to={`/p/${project.id}/serial`} className="font-semibold text-jjok hover:underline" data-testid={appTid('serial-link')}>시리즈·회차</Link>
+              <Link to={`/p/${project.id}/images`} className="font-semibold text-jjok hover:underline" data-testid={appTid('images-link')}>그림 꾸러미</Link>
               <Link to={`/p/${project.id}/brief`} className="font-semibold text-jjok hover:underline" data-testid={appTid('brief-link')}>
                 작업 브리핑
               </Link>

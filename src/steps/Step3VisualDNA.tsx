@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { AiAssist } from '@/components/AiAssist';
 import { CopyButton } from '@/components/CopyButton';
@@ -247,7 +248,7 @@ export function Step3VisualDNA({ project, api }: { project: Project; api: Projec
         <h2 id="s3-preview-heading" className="font-sans text-sm font-bold">
           프롬프트 미리보기
         </h2>
-        <p className="mt-1 text-[13px] text-ink-soft">4·5단계에서 이미지 AI에 보낼 글입니다. 어색한 곳은 위 카드에서 고칩니다.</p>
+        <p className="mt-1 text-[13px] text-ink-soft">4·5단계에서 이미지 AI에 보낼 글입니다. 어색한 곳은 위 카드에서 고칩니다. Genspark를 쓸 때는 기준 이미지 첨부 순서까지 넣은 <Link className="text-jjok hover:underline" to={`/p/${p.id}/images`} data-testid="s3-images-link">그림 꾸러미의 컷 카드</Link>를 쓰세요.</p>
 
         {firstCharacter && (
           <div className="mt-3">

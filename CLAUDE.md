@@ -62,3 +62,4 @@ npm run build && npm run lint && npm run test:e2e
 - 시리즈 기록은 serial.ts/serialFolder.ts, 다음 회 생성은 nextEpisode.ts. 원고·기록 불변 판본과 상태 포인터 마지막 갱신, 취소/복구/전체 ZIP 경계를 유지한다.
 - 스냅샷은 확정 당시 말투·화풍·음성을 포함한다. 다른 프로젝트 설정을 다음 회에 섞지 않으며 권리·완료·이미지 승인을 이어받지 않는다.
 - 사용 절차/검사: docs/authoring-records.md, npm run test:unit. 원문 소설·개인자료를 Git에 넣지 않는다.
+- 그림 꾸러미: gensparkCard.ts(카드 생성), mediaRules.ts(형식 검사·승인 해제, 순환 방지를 위해 다른 lib을 가져오지 않음), pages/ImagesPage.tsx. 생성·결제·자동 조작 금지. 기준 이미지가 있는 인물은 외모를 글로 다시 쓰지 않는다. handoff 1.0 불변.
