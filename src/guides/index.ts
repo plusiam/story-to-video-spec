@@ -10,23 +10,23 @@ import type { Guide } from './types';
 export const GUIDES: Record<StepNo, Guide> = {
   0: {
     id: 'GUIDE-S0',
-    version: '1.1',
+    version: '1.2',
     step: 0,
     title: '프로젝트 설정',
-    purpose: '이야기의 출처와 영상 길이를 정하고 작업 폴더를 연결해, 저작권·분량·파일 보관 기준을 먼저 세운다.',
+    purpose: '출처와 영상 길이를 정한다. 폴더는 선택 사항이며, 미연결이면 JSON 백업으로 보관한다.',
     inputs: ['운영자가 고른 옛이야기 또는 창작 아이디어'],
     actions: [
-      { text: '영상 제목을 입력한다', testid: 's0-title' },
+      { text: 'Aside와 정한 설정 JSON을 붙여 넣거나 아래 칸을 직접 채운다. 사람 확인은 JSON으로 가져오지 않는다', testid: 's0-paste / s0-paste-apply / s0-title' },
       { text: '원작 유형을 고른다: 전래 민담(줄거리만 사용) 또는 순수 창작', testid: 's0-source-type-folktale / s0-source-type-original' },
       { text: '줄거리를 어디서 알게 되었는지 출처 메모를 적는다', testid: 's0-source-note' },
-      { text: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크한다', testid: 's0-no-commercial-book' },
+      { text: '운영자가 출처를 검토하고 시판 그림책 미사용 확인란에 직접 체크한다. AI가 대신 체크하지 않는다', testid: 's0-no-commercial-book' },
       { text: '목표 길이(분)를 확인한다. 기본 6분', testid: 's0-duration-min' },
       { text: '시리즈 이름이 있으면 적는다', testid: 's0-series' },
-      { text: '작업 폴더가 연결되어 있지 않으면 운영자에게 연결을 요청한다. 폴더 선택 창은 운영자만 누른다', testid: 'app-folder-connect' },
-      { text: '점검표가 모두 통과하면 완료 버튼을 누른다', testid: 's0-complete' },
+      { text: '작업 폴더 연결은 선택 사항이다. 폴더 없이 쓰면 내보내기에서 JSON 백업을 보관한다. 선택·권한 창은 운영자만 누른다', testid: 'app-folder-connect / app-export-link' },
+      { text: '점검표 통과 후 운영자가 검토하고 완료 버튼을 누른다', testid: 's0-complete' },
     ],
     quality: {
-      auto: ['제목 있음', '원작 유형 선택됨', '출처 메모 10자 이상', '시판 그림책 미사용 확인', '목표 길이 3~15분', '작업 폴더 연결됨'],
+      auto: ['제목 있음', '원작 유형 선택됨', '출처 메모 10자 이상', '시판 그림책 미사용 확인', '목표 길이 3~15분'],
       visual: ['출처 메모에 특정 출판사의 그림책 제목이 들어 있지 않은지 읽어 본다'],
     },
     avoid: [
@@ -41,19 +41,19 @@ export const GUIDES: Record<StepNo, Guide> = {
 
   1: {
     id: 'GUIDE-S1',
-    version: '1.1',
+    version: '1.2',
     step: 1,
-    title: '이야기 다시 쓰기',
+    title: '스토리 만들기',
     purpose: '운영자의 문장으로 다시 쓴, 귀로 듣기 쉬운 내레이션 원고 한 편을 확정한다.',
     inputs: ['0단계 출처 메모', '목표 길이'],
     actions: [
       { text: '기승전결 뼈대를 한 줄씩 4줄로 쓴다', testid: 's1-outline-01 ~ s1-outline-04' },
       { text: '말투를 확인한다. 기본은 할머니가 들려주는 다정한 말투', testid: 's1-tone' },
       { text: '원고를 직접 쓰거나, AI 요청문을 복사해 외부 AI(Claude·Gemini)에 붙여 넣는다', testid: 's1-full-text / s1-copy-request' },
-      { text: '외부 AI의 답 전체를 결과 붙여넣기 칸에 넣고 「원고에 반영」을 누른다', testid: 's1-paste / s1-paste-apply' },
+      { text: '대화에서 만든 원고 본문 또는 outline·tone·fullText JSON을 붙여 넣고 반영한다. 확인·완료 값은 넣지 않는다', testid: 's1-paste / s1-paste-apply' },
       { text: '분량 계기와 문장 점검 목록을 보고, 표시된 문장을 고친다', testid: 's1-length-meter / s1-flags' },
-      { text: '원작 문장을 옮긴 곳이 없는지 읽고 확인란에 체크한다', testid: 's1-own-wording' },
-      { text: '점검표가 모두 통과하면 원고를 확정한다', testid: 's1-complete' },
+      { text: '운영자가 원고를 읽고 원작 문장 미사용 확인란에 직접 체크한다. AI가 대신 체크하지 않는다', testid: 's1-own-wording' },
+      { text: '점검표 통과 후 운영자가 검토하고 원고를 확정한다', testid: 's1-complete' },
     ],
     quality: {
       auto: ['뼈대 4줄', '분량 1분당 250자 기준 ±15% (공백 제외)', '한 문장 40자 이하', '영어·숫자 표기 없음', '원작 문장 미사용 확인'],
@@ -66,7 +66,7 @@ export const GUIDES: Record<StepNo, Guide> = {
 
   2: {
     id: 'GUIDE-S2',
-    version: '1.1',
+    version: '1.2',
     step: 2,
     title: '장면 나누기',
     purpose: '원고를 8~15초짜리 장면으로 잘라, 장면마다 그림 한 장으로 보여 줄 장면표를 만든다.',
@@ -76,7 +76,7 @@ export const GUIDES: Record<StepNo, Guide> = {
       { text: '장면마다 화면 설명, 장소, 등장인물, 분위기를 채운다. 같은 장소·인물은 늘 같은 이름으로', testid: 's2-scene-NN-visual / -location / -characters / -emotion' },
       { text: '순서는 위·아래 버튼으로 바꾸고, 빈 장면이 필요하면 아래에 추가하고, 필요 없는 장면은 삭제한다', testid: 's2-scene-NN-up / -down / -add-after / -delete' },
       { text: '특정 장면은 주소 ?scene=NN 으로 바로 연다' },
-      { text: '점검표가 모두 통과하면 장면표를 확정한다', testid: 's2-complete' },
+      { text: '점검표 통과 후 운영자가 검토하고 장면표를 확정한다', testid: 's2-complete' },
     ],
     quality: {
       auto: ['6분 기준 장면 24~45개', '장면당 내레이션 60자 이하', '모든 장면에 화면 설명·장소·인물', '장면 내레이션 합계가 원고와 10% 이내'],
@@ -89,7 +89,7 @@ export const GUIDES: Record<StepNo, Guide> = {
 
   3: {
     id: 'GUIDE-S3',
-    version: '1.1',
+    version: '1.2',
     step: 3,
     title: '비주얼 DNA',
     purpose: '화풍, 인물 카드, 장소 카드를 정해 모든 그림이 따를 기준을 세운다.',
@@ -97,12 +97,12 @@ export const GUIDES: Record<StepNo, Guide> = {
     actions: [
       { text: '화풍을 고른다: 민화풍, 수묵담채, 그림책 수채화, 직접 쓰기', testid: 's3-style-preset-minhwa / -sumuk / -picturebook-watercolor / -custom' },
       { text: '「장면표에서 카드 맞추기」로 인물·장소 카드를 만든다', testid: 's3-sync-cards' },
-      { text: '카드 요청문을 외부 AI에 보내고 답을 붙여 넣거나, 카드를 직접 채운다', testid: 's3-copy-request / s3-paste' },
+      { text: '대화에서 만든 카드 JSON을 붙여 넣거나 직접 채운다. stylePreset·customStyle·negatives도 함께 넣을 수 있다', testid: 's3-copy-request / s3-paste' },
       { text: '인물 카드마다 나이, 얼굴, 머리, 옷, 소품, 대표 색 3개를 확인한다', testid: 's3-character-NN-*' },
-      { text: '장소 카드 설명을 확인한다', testid: 's3-location-NN-desc' },
+      { text: '장소 카드 설명을 확인한다. 외부 도구에 등록한 Element 이름이 있으면 선택 입력한다', testid: 's3-location-NN-desc / s3-location-NN-element-name' },
       { text: '금지 요소를 확인한다', testid: 's3-negatives' },
       { text: '프롬프트 미리보기를 읽고 어색한 곳을 카드에서 고친다', testid: 's3-preview' },
-      { text: '점검표가 모두 통과하면 DNA를 확정한다', testid: 's3-complete' },
+      { text: '점검표 통과 후 운영자가 검토하고 DNA를 확정한다', testid: 's3-complete' },
     ],
     quality: {
       auto: ['화풍 정함', '장면표의 모든 인물·장소가 카드로 있음', '인물 카드 나이·얼굴·머리·옷 채움', '인물마다 첫째 대표 색이 다름', '장소 설명 10자 이상', '금지 요소 있음'],

@@ -17,7 +17,7 @@ import {
 } from '@/lib/text';
 import { PANEL_KEYS, PANEL_LABEL, type PanelKey, type Project, type SceneRecord } from '@/types/project';
 
-const GUIDE = 'GUIDE-S2 v1.1';
+const GUIDE = 'GUIDE-S2 v1.2';
 
 /** 2단계 장면 나누기 */
 export function Step2Scenes({ project, api }: { project: Project; api: ProjectApi }) {

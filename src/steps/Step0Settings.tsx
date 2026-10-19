@@ -1,3 +1,6 @@
+import { AiAssist } from '@/components/AiAssist';
+import { parseSettingsInput } from '@/lib/batchInput';
+import { appendLog } from '@/lib/project';
 import type { ProjectApi } from '@/hooks/useProject';
 import { tid } from '@/lib/testid';
 import type { Project, SourceType } from '@/types/project';
@@ -20,6 +23,22 @@ export function Step0Settings({ project, api }: { project: Project; api: Project
     <fieldset disabled={locked} className="max-w-prose space-y-6">
       <legend className="sr-only">프로젝트 설정</legend>
 
+      {!locked && <AiAssist
+        prefix="s0"
+        title="Aside·외부 AI와 정한 설정 한 번에 넣기"
+        note="확인란과 단계 완료는 대신 처리하지 않습니다. 설정을 바꾸면 출처 확인을 다시 받습니다."
+        request={'대화에서 합의한 설정을 다음 JSON으로 정리하세요. 확인·승인 값은 넣지 마세요.\n' + JSON.stringify({ title: p.title, sourceType: p.source.type ?? 'folktale', sourceNote: p.source.note, durationMin: minutes, series: p.target.series }, null, 2)}
+        pasteLabel="설정 JSON을 붙여 넣으세요"
+        applyLabel="설정에 반영"
+        onApply={(text) => {
+          const r = parseSettingsInput(text);
+          if (!r.value) return r.errors;
+          const v = r.value;
+          api.update((cur) => appendLog({ ...cur, title: v.title, source: { type: v.sourceType, note: v.sourceNote, noCommercialBookConfirmed: false }, target: { ...cur.target, durationSec: Math.round(v.durationMin * 60), series: v.series ?? cur.target.series } }, '설정 JSON을 반영했습니다 (사람 확인은 미완료)', 'GUIDE-S0 v1.2'));
+          return null;
+        }}
+      />}
+      <p className="field-hint">작업 폴더는 선택 사항입니다. 연결하지 않아도 작업할 수 있으며 내보내기에서 JSON 백업을 보관하세요.</p>
       <div>
         <label htmlFor="s0-title" className="field-label">
           영상 제목

@@ -42,3 +42,13 @@ React 18 + TypeScript + Vite + Tailwind CSS 3 + React Router 6. 서버 없이 �
 ```bash
 npm run build && npm run lint && npm run test:e2e
 ```
+
+
+## M2 대화형 일괄 입력·인계 (2026-10-19)
+
+- 0~3단계에는 폴더 연결이 필수가 아니다. 미연결이면 브라우저 저장 + JSON 백업을 안내한다.
+- 단계별 JSON 입력은 batchInput.ts와 aiRequests.ts에서 검증한다. 승인·확인·완료 값은 넣지 않는다.
+- project JSON은 앱 복원용, handoff.json은 콘텐츠 인계용이다. 둘을 혼동하지 않는다. 형식은 docs/aside-handoff.md 참고.
+- 내용 변경 시 invalidateEditedSteps를 통해 관련 확인과 후속 완료를 해제한다. nextAction과 handoff의 판정이 서로 모순되면 안 된다.
+- 앱이 실제 생성·비용 지출·게시를 자동 실행하지 않는다. handoff의 ready도 비용 지출 허가가 아니다.
+- 운영 브랜치는 feat/m2-text-steps. main을 변경하지 않는다. 공개 반영은 운영자 확인 후 수행한다.

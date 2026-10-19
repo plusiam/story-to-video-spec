@@ -125,3 +125,33 @@ export function validateProjectJson(raw: unknown): { project: Project | null; er
   if (!Array.isArray(p.log)) errors.push('log(배열)가 없습니다.');
   return errors.length ? { project: null, errors } : { project: p as unknown as Project, errors };
 }
+
+/** 내용이 바뀌면 관련 확인과 이후 단계 완료를 해제한다. 승인 값은 자동으로 만들지 않는다. */
+export function invalidateEditedSteps(previous: Project, candidate: Project): Project {
+  const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+  const sourceChanged = changed([previous.source.type, previous.source.note], [candidate.source.type, candidate.source.note]);
+  const scriptChanged = changed([previous.script.outline, previous.script.tone, previous.script.fullText], [candidate.script.outline, candidate.script.tone, candidate.script.fullText]);
+  let from = 8;
+  if (sourceChanged || changed(previous.target, candidate.target) || previous.title !== candidate.title || previous.source.noCommercialBookConfirmed !== candidate.source.noCommercialBookConfirmed) from = 0;
+  if (scriptChanged || previous.script.ownWordingConfirmed !== candidate.script.ownWordingConfirmed) from = Math.min(from, 1);
+  if (changed(previous.scenes, candidate.scenes)) from = Math.min(from, 2);
+  const textDna = (dna: Project['visualDNA']) => ({ ...dna, characters: dna.characters.map((c) => ({ ...c, refSheet: undefined })), locations: dna.locations.map((l) => ({ ...l, refImage: undefined })) });
+  if (changed(textDna(previous.visualDNA), textDna(candidate.visualDNA))) from = Math.min(from, 3);
+  else if (changed(previous.visualDNA, candidate.visualDNA)) from = Math.min(from, 4);
+  const progress = { ...candidate.progress };
+  let reset = false;
+  for (const key of Object.keys(progress)) {
+    if (Number(key) >= from) { delete progress[Number(key) as keyof typeof progress]; reset = true; }
+  }
+  const globalStyleChanged = changed([previous.visualDNA.stylePreset, previous.visualDNA.customStyle, previous.visualDNA.negatives], [candidate.visualDNA.stylePreset, candidate.visualDNA.customStyle, candidate.visualDNA.negatives]);
+  const visualDNA = { ...candidate.visualDNA, characters: candidate.visualDNA.characters.map((card) => {
+    const old = previous.visualDNA.characters.find((c) => c.id === card.id);
+    const imageChanged = globalStyleChanged || changed({ ...old, refSheet: undefined }, { ...card, refSheet: undefined }) || old?.refSheet.file !== card.refSheet.file;
+    return imageChanged && card.refSheet.approved ? { ...card, refSheet: { ...card.refSheet, approved: false } } : card;
+  }) };
+  const next = { ...candidate, progress, visualDNA,
+    source: sourceChanged ? { ...candidate.source, noCommercialBookConfirmed: false } : candidate.source,
+    script: scriptChanged ? { ...candidate.script, ownWordingConfirmed: false } : candidate.script,
+  };
+  return reset ? appendLog(next, from + '단계 내용 변경으로 이후 완료를 해제했습니다. 다시 확인하세요.') : next;
+}

@@ -4,9 +4,9 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GUIDES, guideLabel } from '@/guides';
-import { appendLog, clock, nowIso } from '@/lib/project';
+import { appendLog, clock, nowIso, invalidateEditedSteps } from '@/lib/project';
 import { mirrorProject } from '@/lib/folder';
-import { checksFor, type StepEnv } from '@/lib/steps';
+import { blockReason, checksFor, type StepEnv } from '@/lib/steps';
 import { store } from '@/lib/storage';
 import type { Project, StepNo } from '@/types/project';
 
@@ -96,7 +96,7 @@ export function useProject(id: string | undefined) {
     (fn: (p: Project) => Project) => {
       setProject((prev) => {
         if (!prev) return prev;
-        const next = { ...fn(prev), updatedAt: nowIso() };
+        const next = { ...invalidateEditedSteps(prev, fn(prev)), updatedAt: nowIso() };
         latest.current = next;
         return next;
       });
@@ -120,6 +120,8 @@ export function useProject(id: string | undefined) {
     (step: StepNo, env: StepEnv): { ok: true } | { ok: false; reasons: string[] } => {
       const p = latest.current;
       if (!p) return { ok: false, reasons: ['프로젝트를 아직 불러오지 못했습니다.'] };
+      const blocked = blockReason(step, p);
+      if (blocked) return { ok: false, reasons: [blocked] };
       const failing = checksFor(step, p, env).filter((c) => !c.ok);
       if (failing.length) return { ok: false, reasons: failing.map((c) => c.fix) };
       update((cur) =>
@@ -139,7 +141,9 @@ export function useProject(id: string | undefined) {
     (step: StepNo) => {
       update((cur) => {
         const progress = { ...cur.progress };
-        delete progress[step];
+        for (const n of Object.keys(progress)) {
+          if (Number(n) >= step) delete progress[Number(n) as StepNo];
+        }
         return appendLog({ ...cur, progress }, `${step}단계 「${GUIDES[step].title}」 완료를 취소하고 다시 엽니다`, guideLabel(GUIDES[step]));
       });
     },

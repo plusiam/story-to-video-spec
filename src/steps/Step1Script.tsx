@@ -1,6 +1,7 @@
 import { AiAssist } from '@/components/AiAssist';
 import type { ProjectApi } from '@/hooks/useProject';
 import { rewriteRequest } from '@/lib/aiRequests';
+import { parseStoryInput } from '@/lib/batchInput';
 import { appendLog, DEFAULT_TONE } from '@/lib/project';
 import { tid } from '@/lib/testid';
 import { charCount, estimateSec, flagSentences, splitSentences, targetRange } from '@/lib/text';
@@ -68,15 +69,16 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
       {!locked && (
         <AiAssist
           prefix="s1"
-          title="외부 AI로 원고 쓰기·다듬기"
-          note="뼈대만 있으면 새로 쓰고, 원고가 있으면 조건에 맞게 다듬어 달라고 요청합니다."
-          request={rewriteRequest(p)}
-          pasteLabel="외부 AI가 쓴 원고를 붙여 넣으세요 (지금 원고를 바꿉니다)"
+          title="Aside·외부 AI로 스토리 만들기·다듬기"
+          note="대화하며 새 이야기를 쓰거나 개작합니다. 원고 본문 또는 {outline: [기, 승, 전, 결], tone: 말투, fullText: 원고} JSON을 받습니다."
+          request={rewriteRequest(p) + '\n\nAside에서 대화 후 일괄 입력할 때는 {"outline":["기","승","전","결"],"tone":"말투","fullText":"원고 본문"} JSON을 사용할 수 있습니다. ownWordingConfirmed나 progress는 넣지 마세요.'}
+          pasteLabel="원고 본문 또는 스토리 JSON을 붙여 넣으세요 (지금 원고를 바꿉니다)"
           applyLabel="원고에 반영"
           onApply={(text) => {
-            const clean = text.replace(/```[a-z]*\n?|```/g, '').trim();
-            if (charCount(clean) < 100) return ['원고가 너무 짧습니다. 외부 AI의 답 전체를 복사했는지 확인하세요.'];
-            api.update((cur) => appendLog({ ...cur, script: { ...cur.script, fullText: clean, ownWordingConfirmed: false } }, `외부 AI 원고를 반영했습니다 (${charCount(clean)}자)`, 'GUIDE-S1 v1.1'));
+            const r = parseStoryInput(text);
+            if (!r.value) return r.errors;
+            const v = r.value;
+            api.update((cur) => appendLog({ ...cur, script: { ...cur.script, ...v, ownWordingConfirmed: false } }, `대화 원고를 반영했습니다 (${charCount(v.fullText)}자, 사람 확인은 미완료)`, 'GUIDE-S1 v1.2'));
             return null;
           }}
         />

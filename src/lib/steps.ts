@@ -42,18 +42,6 @@ export const STATUS_LABEL: Record<StepStatus, string> = {
   blocked: '막힘',
 };
 
-function folderCheck(env: StepEnv): Check {
-  const f = env.folder;
-  if (f?.kind === 'ready') return { id: 'app-folder', label: '작업 폴더 연결됨', ok: true, fix: '' };
-  const fix =
-    f?.kind === 'unsupported'
-      ? '이 브라우저는 작업 폴더를 지원하지 않습니다. 크롬이나 엣지에서 여세요.'
-      : f?.kind === 'needs-permission'
-        ? '운영자에게 「폴더 다시 허용」(app-folder-reauthorize)을 눌러 달라고 요청하세요. 허용 창은 운영자만 누를 수 있습니다.'
-        : '운영자에게 「작업 폴더 연결」(app-folder-connect)을 요청하세요. 폴더 선택 창은 운영자만 누를 수 있습니다.';
-  return { id: f?.kind === 'needs-permission' ? 'app-folder-reauthorize' : 'app-folder-connect', label: '작업 폴더 연결됨', ok: false, fix };
-}
-
 /** 첫 번째 실패 위치를 가리키는 점검 하나 만들기 */
 function firstFailing<T>(
   items: T[],
@@ -68,7 +56,7 @@ function firstFailing<T>(
 }
 
 /** 단계별 품질 점검. 아직 화면이 없는 단계는 "준비 중" 점검 하나만 돌려준다 */
-export function checksFor(step: StepNo, p: Project, env: StepEnv): Check[] {
+export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
   const guide = GUIDES[step];
   if (!guide.implemented) {
     return [
@@ -90,7 +78,6 @@ export function checksFor(step: StepNo, p: Project, env: StepEnv): Check[] {
         { id: 's0-source-note', label: '출처 메모 10자 이상', ok: p.source.note.trim().length >= 10, fix: '줄거리를 어디서 알게 되었는지 10자 이상 적으세요.' },
         { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
         { id: 's0-duration-min', label: '목표 길이 3~15분', ok: minutes >= 3 && minutes <= 15, fix: '목표 길이를 3분에서 15분 사이로 정하세요.' },
-        folderCheck(env),
       ];
     }
 
@@ -141,7 +128,8 @@ export function checksFor(step: StepNo, p: Project, env: StepEnv): Check[] {
     case 2: {
       const s = p.scenes;
       const { min, max } = sceneCountRange(p.target.durationSec);
-      const nar = charCount(s.map((x) => x.narration).join(''));
+      const narrationText = s.map((x) => x.narration).join('').replace(/\s/g, '');
+      const nar = narrationText.length;
       const script = charCount(p.script.fullText);
       const coverage = script ? Math.abs(nar - script) / script : 1;
       const sid = (i: number, field: string) => `s2-scene-${pad2(i + 1)}-${field}`;
@@ -175,9 +163,9 @@ export function checksFor(step: StepNo, p: Project, env: StepEnv): Check[] {
         ),
         {
           id: 's2-scene-list',
-          label: '장면 내레이션이 원고를 모두 담음',
-          ok: coverage <= 0.1,
-          fix: `장면 내레이션 합계(${nar}자)가 원고(${script}자)와 10% 넘게 다릅니다. 빠지거나 겹친 문장이 있는지 확인하세요.`,
+          label: '내레이션 순서·문장이 원고와 일치',
+          ok: coverage <= 0.1 && narrationText === p.script.fullText.replace(/\s/g, ''),
+          fix: '최신 원고와 장면표의 문장 또는 순서가 다릅니다. 최신 원고로 장면표를 다시 반영하세요.',
         },
       ];
     }
@@ -294,17 +282,36 @@ export interface NextAction {
  * "다음 할 일" 한 문장. 띠·브리핑 페이지가 모두 이 문장을 쓴다.
  * 형식: 무엇이 비었는지 + 어떻게 하는지 (이름표 포함)
  */
+/** 구버전 백업의 뒤집힌 완료 기록도 인계 준비 완료로 오인하지 않는다. */
+export function completionOrderIssue(step: StepNo, p: Project): string | null {
+  const at = p.progress[step]?.completedAt;
+  if (!at) return null;
+  const time = Date.parse(at);
+  if (!Number.isFinite(time)) return step + '단계 완료 날짜를 확인하고 다시 완료하세요.';
+  for (const before of STEP_NUMBERS.filter((n) => n < step)) {
+    const prev = p.progress[before]?.completedAt;
+    if (!prev || Date.parse(prev) > time) return before + '단계 뒤에 ' + step + '단계를 다시 검토·완료하세요.';
+  }
+  return null;
+}
+
 export function nextAction(p: Project, env: StepEnv): NextAction {
-  const step = currentStep(p);
+  const stale = ([0, 1, 2, 3] as const).find((s) => !p.progress[s]?.completedAt || completionOrderIssue(s, p) || checksFor(s, p, env).some((c) => !c.ok));
+  const step = stale ?? currentStep(p);
   if (step === null) return { step: null, text: '모든 단계를 완료했습니다. 작업 폴더의 파일로 영상을 편집하세요.' };
 
   const guide = GUIDES[step];
+  if (step === 4 && [0, 1, 2, 3].every((n) => isComplete(n as StepNo, p))) {
+    return { step: null, text: '스토리·장면표·캐릭터 설정을 마쳤습니다. 내보내기에서 handoff.json을 복사하거나 내려받아 제작 담당에게 전달하세요. 유료 생성은 별도 확인이 필요합니다.' };
+  }
   if (!guide.implemented) {
     return {
       step,
       text: `${step}단계 「${guide.title}」 화면은 아직 준비 중입니다. 여기서 작업을 멈추고 운영자에게 알리세요.`,
     };
   }
+  const orderIssue = completionOrderIssue(step, p);
+  if (orderIssue) return { step, text: orderIssue + ' (완료 취소 s' + step + '-reopen 후 재확인)' };
   const failing = checksFor(step, p, env).find((c) => !c.ok);
   if (failing) {
     return { step, text: `${step}단계 「${guide.title}」: ${failing.fix} (이름표 ${failing.id})` };

@@ -76,9 +76,11 @@ export function dnaRequest(p: Project): string {
     '조건',
     '1. 인물: age(나이대), face(얼굴형·눈·표정 특징), hair(머리 모양·색), outfit(옷 종류·색, 시대에 맞게), props(늘 지니는 소품, 없으면 빈 글), colors(대표 색 3개, #RRGGBB).',
     '2. 인물끼리 옷 색과 실루엣이 확실히 구분되게 합니다.',
+    'Element 이름은 외부 도구에 이미 등록한 참조 이름일 때만 elementName에 쓰고, 없으면 비워 둡니다.',
     '3. 실존 인물이나 유명 캐릭터를 닮게 하지 않습니다.',
     '4. 장소: desc(시대, 계절, 주요 사물, 빛) 한두 문장.',
     '',
+    '선택: 최상위에 stylePreset(minhwa/sumuk/picturebook-watercolor/custom), customStyle, negatives를 함께 넣을 수 있습니다. 승인·완료 값은 넣지 마세요.',
     '출력: 아래 형식의 JSON만 출력하세요.',
     '{"characters":[{"name":"…","age":"…","face":"…","hair":"…","outfit":"…","props":"…","colors":["#…","#…","#…"]}],"locations":[{"name":"…","desc":"…"}]}',
     '',
@@ -157,6 +159,7 @@ export function parseDna(
       unknownNames.push(name || `${i + 1}번 인물(이름 없음)`);
       continue;
     }
+    if (r.elementName !== undefined && typeof r.elementName !== 'string') errors.push(`characters[${i}].elementName: 문자열이어야 합니다.`);
     const colors = Array.isArray(r.colors) ? r.colors.map(str) : [];
     if (colors.length !== 3 || !colors.every((c) => HEX.test(c))) {
       errors.push(`${name}: colors는 #RRGGBB 형식 3개여야 합니다.`);
@@ -166,7 +169,8 @@ export function parseDna(
       face: str(r.face) || card.face,
       hair: str(r.hair) || card.hair,
       outfit: str(r.outfit) || card.outfit,
-      props: str(r.props) || card.props,
+      props: typeof r.props === 'string' ? r.props.trim() : card.props,
+      ...(str(r.elementName) ? { elementName: str(r.elementName) } : {}), // 빈 AI 값은 사람이 등록한 이름을 보존
       colors: colors.length === 3 && colors.every((c) => HEX.test(c)) ? (colors as [string, string, string]) : card.colors,
     });
   }
@@ -180,7 +184,9 @@ export function parseDna(
       unknownNames.push(name || `${i + 1}번 장소(이름 없음)`);
       continue;
     }
+    if (r.elementName !== undefined && typeof r.elementName !== 'string') errors.push(`locations[${i}].elementName: 문자열이어야 합니다.`);
     card.desc = str(r.desc) || card.desc;
+    if (str(r.elementName)) card.elementName = str(r.elementName);
   }
 
   if (errors.length) return { ...fail(errors), unknownNames };

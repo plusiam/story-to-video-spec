@@ -37,6 +37,8 @@ export interface CharacterCard {
   hair: string;
   outfit: string;
   props: string;
+  /** 외부 제작 도구에 등록한 참조 이름. 등록 전에는 비워 둔다 */
+  elementName?: string;
   /** 대표 색 3개 (#RRGGBB) */
   colors: [string, string, string];
   refSheet: { file: string | null; approved: boolean };
@@ -48,6 +50,7 @@ export interface LocationCard {
   name: string;
   desc: string;
   refImage: string | null;
+  elementName?: string;
 }
 
 export interface SceneRecord {

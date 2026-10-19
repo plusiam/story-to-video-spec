@@ -4,19 +4,21 @@ import { CopyButton } from '@/components/CopyButton';
 import type { ProjectApi } from '@/hooks/useProject';
 import { dnaRequest, parseDna, syncCards } from '@/lib/aiRequests';
 import { STYLE_PRESETS, characterSheetPrompt, scenePrompt } from '@/lib/imagePrompt';
+import { parseVisualOptions } from '@/lib/batchInput';
 import { appendLog, DEFAULT_NEGATIVES } from '@/lib/project';
 import { tid } from '@/lib/testid';
 import { characterNames, namesInScenes } from '@/lib/text';
 import type { CharacterCard, LocationCard, Project, StylePreset } from '@/types/project';
 
-const GUIDE = 'GUIDE-S3 v1.1';
+const GUIDE = 'GUIDE-S3 v1.2';
 
-const CHARACTER_FIELDS: { key: keyof Pick<CharacterCard, 'age' | 'face' | 'hair' | 'outfit' | 'props'>; label: string; placeholder: string }[] = [
+const CHARACTER_FIELDS: { key: keyof Pick<CharacterCard, 'age' | 'face' | 'hair' | 'outfit' | 'props' | 'elementName'>; label: string; placeholder: string }[] = [
   { key: 'age', label: '나이대', placeholder: '예: 서른 살 남짓' },
   { key: 'face', label: '얼굴', placeholder: '예: 둥근 얼굴, 순한 눈매, 그을린 피부' },
   { key: 'hair', label: '머리', placeholder: '예: 상투를 틀고 흰 머리띠' },
   { key: 'outfit', label: '옷', placeholder: '예: 해진 흰 저고리와 회색 바지, 짚신' },
   { key: 'props', label: '소품', placeholder: '예: 지게, 도끼 (없으면 비워 둠)' },
+  { key: 'elementName', label: '힉스필드 Element 이름 (선택)', placeholder: '등록한 이름만 입력. 아직 없으면 비워 둡니다' },
 ];
 
 /** 3단계 비주얼 DNA */
@@ -119,11 +121,13 @@ export function Step3VisualDNA({ project, api }: { project: Project; api: Projec
           pasteLabel="외부 AI가 준 카드 JSON을 붙여 넣으세요 (같은 이름의 카드 내용을 바꿉니다)"
           applyLabel="카드에 반영"
           onApply={(text) => {
+            const options = parseVisualOptions(text);
+            if (!options.value) return options.errors;
             const r = parseDna(text, { characters: dna.characters, locations: dna.locations });
             if (r.errors.length) return r.errors;
             if (r.unknownNames.length)
               return [`장면표에 없는 이름이 있습니다: ${r.unknownNames.join(', ')}. 외부 AI에게 장면표의 이름을 그대로 쓰라고 다시 요청하세요.`];
-            setDna({ characters: r.characters, locations: r.locations }, '외부 AI 카드 내용을 반영했습니다');
+            setDna({ ...options.value, characters: r.characters, locations: r.locations }, '대화에서 정한 화풍·카드 내용을 반영했습니다');
             return null;
           }}
         />
@@ -155,7 +159,7 @@ export function Step3VisualDNA({ project, api }: { project: Project; api: Projec
                         <label htmlFor={id(f.key)} className="field-label">
                           {f.label}
                         </label>
-                        <input id={id(f.key)} className="input" value={c[f.key]} placeholder={f.placeholder} onChange={(e) => patchCharacter(c.id, { [f.key]: e.target.value })} data-testid={id(f.key)} />
+                        <input id={id(f.key)} className="input" value={c[f.key] ?? ''} placeholder={f.placeholder} onChange={(e) => patchCharacter(c.id, { [f.key]: e.target.value })} data-testid={id(f.key)} />
                       </div>
                     ))}
                     <div className="flex flex-wrap items-center gap-3">
@@ -214,6 +218,8 @@ export function Step3VisualDNA({ project, api }: { project: Project; api: Projec
                   onChange={(e) => patchLocation(l.id, { desc: e.target.value })}
                   data-testid={id('desc')}
                 />
+                <label htmlFor={id('element-name')} className="field-label mt-3">힉스필드 Element 이름 (선택)</label>
+                <input id={id('element-name')} disabled={locked} className="input" value={l.elementName ?? ''} placeholder="등록 전에는 비워 둡니다" onChange={(e) => patchLocation(l.id, { elementName: e.target.value })} data-testid={id('element-name')} />
                 {uses === 0 && !locked && (
                   <button type="button" className="mt-1 text-xs text-danger" onClick={() => setDna({ locations: dna.locations.filter((x) => x.id !== l.id) }, `장면에 없는 장소 카드 「${l.name}」을 지웠습니다`)} data-testid={id('remove')}>
                     이 카드 지우기
