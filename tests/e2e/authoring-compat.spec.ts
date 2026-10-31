@@ -28,8 +28,9 @@ test('원문 낭독은 22분·긴 문장·영어 숫자·빈 뼈대를 이유로
   p.script.fullText = '이 문장은 PDF 자료를 위한 합성 원고이며 2027년이라는 숫자와 ABC 표기도 유지하고 실제 문장의 길이 역시 임의로 끊지 않습니다. '.repeat(40);
   expect(checksFor(0, p, { folder: null }).filter(c => !c.ok)).toEqual([]);
   expect(checksFor(1, p, { folder: null }).filter(c => !c.ok)).toEqual([]);
-  a.rights.confirmed = false;
-  expect(checksFor(1, p, { folder: null }).some(c => !c.ok)).toBe(true);
+  a.rights = { status: 'unknown', basis: '', confirmed: false, confirmedAt: null };
+  expect(checksFor(0, p, { folder: null }).filter(c => !c.ok)).toEqual([]);
+  expect(checksFor(1, p, { folder: null }).filter(c => !c.ok)).toEqual([]);
 });
 
 test('분량 JSON의 기본 상한은 유지하며 원문 모드만 양수 길이를 허용', () => {
