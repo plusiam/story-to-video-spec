@@ -6,6 +6,9 @@ import { useProject } from '@/hooks/useProject';
 import { currentStep } from '@/lib/steps';
 import { tid } from '@/lib/testid';
 import { Step0Settings } from '@/steps/Step0Settings';
+import { Step1Script } from '@/steps/Step1Script';
+import { Step2Scenes } from '@/steps/Step2Scenes';
+import { Step3VisualDNA } from '@/steps/Step3VisualDNA';
 import { StepPending } from '@/steps/StepPending';
 import type { StepNo } from '@/types/project';
 import { LoadingOrError } from './LoadingOrError';
@@ -15,9 +18,9 @@ const OUTPUT: Record<StepNo, string> = {
   1: '내레이션 원고',
   2: '장면표',
   3: '인물·장소 카드',
-  4: '인물 기준 시트 승인',
-  5: '장면 그림, 움직임 클립',
-  6: '장면별 음성',
+  4: '내레이션 음성, 오디오 마스터',
+  5: '기준 이미지 확인',
+  6: '필요한 구간의 장면 그림',
   7: '자막·설명문·ZIP',
 };
 
@@ -47,7 +50,11 @@ export function StepPage() {
         </h1>
       </header>
 
-      {step === 0 ? <Step0Settings project={project} api={api} /> : <StepPending step={step} />}
+      {step === 0 && <Step0Settings project={project} api={api} />}
+      {step === 1 && <Step1Script project={project} api={api} />}
+      {step === 2 && <Step2Scenes project={project} api={api} />}
+      {step === 3 && <Step3VisualDNA project={project} api={api} />}
+      {step >= 4 && <StepPending step={step} />}
 
       <StepChecks step={step} project={project} api={api} />
     </StudioLayout>

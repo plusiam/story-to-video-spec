@@ -15,7 +15,11 @@ export default defineConfig({
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
     permissions: ['clipboard-read', 'clipboard-write'],
-    launchOptions: process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {},
+    // 한글 폴더 이름을 바르게 다루도록 UTF-8 문자 설정으로 브라우저를 띄운다
+    launchOptions: {
+      ...(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {}),
+      env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' },
+    },
   },
   webServer: {
     command: 'npm run build && npx vite preview --port 4173 --strictPort',

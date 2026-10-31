@@ -13,7 +13,7 @@ export interface ProjectStore {
   readonly label: string;
   list(): Promise<ProjectSummary[]>;
   get(id: string): Promise<Project | null>;
-  save(project: Project): Promise<void>;
+  save(project: Project, expectedJson?: string): Promise<void>;
   remove(id: string): Promise<void>;
 }
 
@@ -62,7 +62,11 @@ export const localStore: ProjectStore = {
     return readJson<Project | null>(projectKey(id), null);
   },
 
-  async save(project) {
+  async save(project, expectedJson) {
+    if (expectedJson !== undefined) {
+      const current = readJson<Project | null>(projectKey(project.id), null);
+      if (JSON.stringify(current) !== expectedJson) throw new Error('다른 창이나 작업에서 이 프로젝트가 변경되었습니다. 덮어쓰지 않고 저장을 중단했습니다. 내보내기로 이 탭의 변경을 먼저 보관한 뒤 새로 열어 비교하세요.');
+    }
     writeJson(projectKey(project.id), project);
     const index = readJson<ProjectSummary[]>(INDEX_KEY, []).filter((s) => s.id !== project.id);
     writeJson(INDEX_KEY, [...index, toSummary(project)]);
