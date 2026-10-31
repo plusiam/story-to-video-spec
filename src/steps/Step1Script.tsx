@@ -40,7 +40,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
     <div className="space-y-8">
       <p className="rounded-md border border-paper-line bg-paper p-3 text-sm" data-testid="s1-authoring-note">
         <Link className="text-jjok underline" to={`/p/${p.id}/source`}>원문·분석</Link>의 PDF·분석은 제작 원고와 별도입니다.
-        {narrating ? ' 원문 낭독 모드: 분량·문장 길이는 참고이며 권리와 검토 본문 일치를 확인합니다.' : ' 각색·창작 모드: 기존 낭독 원고 점검을 사용합니다.'}
+        {narrating ? ' 원문 낭독 모드: 분량·문장 길이는 참고이며 검토 본문과 제작 원고 일치를 확인합니다. 권리 기록은 선택입니다.' : ' 각색·창작 모드: 기존 낭독 원고 점검을 사용합니다.'}
         <Link className="ml-2 text-jjok underline" to={`/p/${p.id}/serial`}>회차 기록 남기기</Link>
       </p>
       <fieldset disabled={locked} className="max-w-prose space-y-3">
@@ -145,7 +145,7 @@ export function Step1Script({ project, api }: { project: Project; api: ProjectAp
         )}
       </section>
 
-      {narrating ? <p className="text-sm text-ink-soft">원문 낭독은 원문·분석 화면의 권리 확인과 검토 본문 일치를 기준으로 합니다. 위 점검을 이유로 원문을 임의로 고치지 않습니다.</p> : <label className="flex max-w-prose items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
+      {narrating ? <p className="text-sm text-ink-soft">원문 낭독은 원문·분석 화면의 검토 본문과 제작 원고 일치를 기준으로 합니다. 권리 기록은 선택입니다. 위 점검을 이유로 원문을 임의로 고치지 않습니다.</p> : <label className="flex max-w-prose items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
         <input
           type="checkbox"
           checked={p.script.ownWordingConfirmed}

@@ -109,7 +109,7 @@ export function Step0Settings({ project, api }: { project: Project; api: Project
         </p>
       </div>
 
-      {narrating ? <p className="rounded-md border border-paper-line p-3 text-sm">원문 낭독은 그림책 미사용 확인 대신 원문·분석 화면의 이용 권리와 추출문 확인을 사용합니다. 다른 작품의 권리를 추측하지 않습니다.</p> : <label className="flex items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
+      {narrating ? <p className="rounded-md border border-paper-line p-3 text-sm">원문 낭독은 그림책 미사용 확인 대신 원문·분석 화면에서 추출문과 제작 원고 일치를 확인합니다. 권리 기록은 선택이며 진행 조건이 아닙니다.</p> : <label className="flex items-start gap-3 rounded-md border border-paper-line bg-white px-3 py-2.5">
         <input
           type="checkbox"
           checked={p.source.noCommercialBookConfirmed}
