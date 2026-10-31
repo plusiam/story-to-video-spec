@@ -85,7 +85,7 @@ export function SourcePage() {
       if (cur.script.fullText.trim() && !replaceScript) return cur;
       return { ...cur, script: { ...cur.script, fullText: material.reviewedText, ownWordingConfirmed: false } };
     });
-    setReplaceScript(false); setMessage('검토 본문을 제작 원고로 복사했습니다. 출처·권리 및 제작 원고 사람 확인은 별도입니다.');
+    setReplaceScript(false); setMessage('검토 본문을 제작 원고로 복사했습니다. 권리 기록은 선택 사항입니다.');
   };
   const applySegments = () => {
     if (!analysis || analysis.segments.length !== 4 || (p.script.outline.some(Boolean) && !replaceOutline)) return;
@@ -106,12 +106,12 @@ export function SourcePage() {
         <h2 id="source-mode-heading" className="text-xl">작업 방식과 이용 권리</h2>
         <label className="field-label" htmlFor="source-mode">작업 방식</label>
         <select id="source-mode" className="input" data-testid="app-source-mode" value={a.scriptMode} onChange={e => api.update(cur => patchAuthoring(cur, { scriptMode: e.target.value as 'adaptation' | 'original_narration' }))}><option value="adaptation">개작: 원문을 바탕으로 새로 쓰기</option><option value="original_narration">원문 낭독: 검토 본문을 제작 원고로 사용</option></select>
-        <p className="text-sm text-ink-soft">원문 낭독은 원문 이용 권한을 별도로 확인해야 합니다. PDF 보유가 공개·각색·낭독 허락을 뜻하지 않습니다.</p>
-        <label className="field-label" htmlFor="source-rights">권리 확인 상태</label>
+        <p className="text-sm text-ink-soft">권리 상태와 근거는 필요할 때 남기는 선택 기록입니다. 이 확인은 단계 완료나 회차 기록을 막지 않습니다. 원문 대조와 사람 청취·잠금은 별도입니다.</p>
+        <label className="field-label" htmlFor="source-rights">권리 확인 상태(선택)</label>
         <select id="source-rights" className="input" value={rights.status} data-testid="app-source-rights-status" onChange={e => updateRights({ status: e.target.value as RightsStatus })}>{RIGHTS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select>
-        <label className="field-label" htmlFor="source-rights-basis">근거: 권리자·허락 범위·문서·확인일 등</label>
+        <label className="field-label" htmlFor="source-rights-basis">근거 메모(선택): 권리자·허락 범위·문서·확인일 등</label>
         <textarea id="source-rights-basis" className="input" rows={3} value={rights.basis} data-testid="app-source-rights-basis" onChange={e => updateRights({ basis: e.target.value })} />
-        <label className="block text-sm"><input type="checkbox" checked={rights.confirmed} disabled={rights.status === 'unknown' || !rights.basis.trim()} data-testid="app-source-rights-confirm" onChange={e => { const checked = e.target.checked; api.update(cur => { const current = authoringOf(cur); return patchAuthoring(cur, { rights: { ...current.rights, confirmed: checked, confirmedAt: checked ? new Date().toISOString() : null } }); }); }} /> 사람이 이용 범위와 근거를 확인했습니다</label>
+        <label className="block text-sm"><input type="checkbox" checked={rights.confirmed} disabled={rights.status === 'unknown' || !rights.basis.trim()} data-testid="app-source-rights-confirm" onChange={e => { const checked = e.target.checked; api.update(cur => { const current = authoringOf(cur); return patchAuthoring(cur, { rights: { ...current.rights, confirmed: checked, confirmedAt: checked ? new Date().toISOString() : null } }); }); }} /> 선택 기록: 이용 범위와 근거를 확인했습니다</label>
       </section>
       <section className="space-y-3" aria-labelledby="source-upload-heading">
         <h2 id="source-upload-heading" className="text-xl">1. 로컬 PDF 가져오기</h2>

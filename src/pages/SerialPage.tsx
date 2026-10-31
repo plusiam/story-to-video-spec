@@ -247,7 +247,7 @@ export function SerialPage() {
   if (!a.episode.notes.summary.trim()) prechecks.push('회차 요약을 적으세요.');
   if (!p.title.trim()) prechecks.push('회차 제목(프로젝트 제목)을 적으세요.');
   if (a.scriptMode === 'original_narration') {
-    if (!a.rights.confirmed || a.rights.status === 'unknown' || !a.rights.basis.trim()) prechecks.push('원작 낭독 모드에서는 권리 상태·근거 입력과 권리 확인이 먼저 필요합니다(원문 화면).');
+    // 권리 기록은 선택 사항이다. 원문 대조와 원고 일치는 serial.ts에서 계속 검사한다.
   } else if (!p.source.type || !p.source.note.trim() || !p.source.noCommercialBookConfirmed || !p.script.ownWordingConfirmed) {
     prechecks.push('각색 모드에서는 0단계 출처·시판 그림책 미사용 확인과 1단계 새 문장 작성 확인이 먼저 필요합니다.');
   }
@@ -604,7 +604,7 @@ export function SerialPage() {
         <p className="text-sm text-ink-soft">연재 회차 기록 · 프로젝트 ID {p.id}</p>
         <h1 className="text-[28px] leading-tight">시리즈 회차 기록</h1>
         <p className="mt-2 text-sm text-ink-soft">
-          이번 회차의 원고와 작업 노트를 시리즈 기록으로 확정합니다. 확정 전 노트는 모두 제안입니다. 이 화면은 단계 완료·권리 확인을 바꾸지 않고, 그림·음성 생성도 하지 않습니다.
+          이번 회차의 원고와 작업 노트를 시리즈 기록으로 확정합니다. 확정 전 노트는 모두 제안입니다. 이 화면은 단계 완료·선택 권리 기록을 바꾸지 않고, 그림·음성 생성도 하지 않습니다.
         </p>
 
         {recoveryNotes.length > 0 && (
