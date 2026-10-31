@@ -61,7 +61,6 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
   const guide = GUIDES[step];
   const authoring = authoringOf(p);
   const narrating = authoring.scriptMode === 'original_narration';
-  const rightsOk = authoring.rights.confirmed && authoring.rights.status !== 'unknown' && authoring.rights.basis.trim().length > 0;
   if (!guide.implemented) {
     return [
       {
@@ -80,7 +79,7 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
         { id: 's0-title', label: '제목 있음', ok: p.title.trim().length > 0 && p.title !== '제목 없는 옛이야기', fix: '영상 제목을 입력하세요.' },
         { id: 's0-source-type', label: '원작 유형 선택됨', ok: p.source.type !== null, fix: '전래 민담 또는 순수 창작을 고르세요.' },
         { id: 's0-source-note', label: '출처 메모 10자 이상', ok: p.source.note.trim().length >= 10, fix: '줄거리를 어디서 알게 되었는지 10자 이상 적으세요.' },
-        narrating ? { id: 'app-source-rights-confirm', label: '원문 이용 권리 확인', ok: rightsOk, fix: '원문·분석 화면에서 이용 권리의 근거와 작가 확인을 남기세요.' } : { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
+        narrating ? { id: 'app-source-mode', label: '원문 낭독 방식 선택됨(권리 확인은 선택 기록)', ok: true, fix: '' } : { id: 's0-no-commercial-book', label: '시판 그림책 미사용 확인', ok: p.source.noCommercialBookConfirmed, fix: '시판 그림책의 문장과 그림을 쓰지 않는다는 확인란에 체크하세요.' },
         { id: 's0-duration-min', label: narrating ? '원문 낭독 목표 길이(양수)' : '목표 길이 3~15분', ok: Number.isFinite(minutes) && (narrating ? minutes > 0 : minutes >= 3 && minutes <= 15), fix: narrating ? '원문 낭독 목표 길이는 0보다 큰 분으로 정하세요. 추정 분량은 참고 정보입니다.' : '목표 길이를 3분에서 15분 사이로 정하세요.' },
       ];
     }
@@ -122,9 +121,9 @@ export function checksFor(step: StepNo, p: Project, _env: StepEnv): Check[] {
         },
         {
           id: 's1-own-wording',
-          label: narrating ? '권리 확인·검토 원문과 일치' : '원작 문장을 옮기지 않음 확인',
-          ok: narrating ? rightsOk && (!authoring.material || (authoring.material.reviewConfirmed && authoring.material.reviewedText.replace(/\s/g, '') === p.script.fullText.replace(/\s/g, ''))) : p.script.ownWordingConfirmed,
-          fix: narrating ? '원문·분석에서 권리와 추출문을 사람이 확인하고, 검토 본문을 제작 원고로 복사하세요. 내용이 다르면 각색 모드로 바꾸세요.' : '원고를 다시 읽고, 출판된 책의 문장을 옮긴 곳이 없으면 확인란에 체크하세요.',
+          label: narrating ? '검토 원문과 제작 원고 일치' : '원작 문장을 옮기지 않음 확인',
+          ok: narrating ? (!authoring.material || (authoring.material.reviewConfirmed && authoring.material.reviewedText.replace(/\s/g, '') === p.script.fullText.replace(/\s/g, ''))) : p.script.ownWordingConfirmed,
+          fix: narrating ? '원문·분석에서 추출문 대조를 확인하고, 검토 본문을 제작 원고로 복사하세요. 내용이 다르면 각색 모드로 바꾸세요.' : '원고를 다시 읽고, 출판된 책의 문장을 옮긴 곳이 없으면 확인란에 체크하세요.',
         },
       ];
     }
