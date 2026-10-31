@@ -20,7 +20,7 @@ export const GUIDES: Record<StepNo, Guide> = {
       { text: '원작 유형을 고른다: 전래 민담(줄거리만 사용) 또는 순수 창작', testid: 's0-source-type-folktale / s0-source-type-original' },
       { text: '줄거리를 어디서 알게 되었는지 출처 메모를 적는다', testid: 's0-source-note' },
       { text: '운영자가 출처를 검토하고 시판 그림책 미사용 확인란에 직접 체크한다. AI가 대신 체크하지 않는다', testid: 's0-no-commercial-book' },
-      { text: '목표 길이(분)를 확인한다. 각색은 기존 범위, 원문 낭독은 원문·분석 메뉴의 권리와 양수 길이를 사용한다', testid: 's0-duration-min' },
+      { text: '목표 길이(분)를 확인한다. 각색은 기존 범위, 원문 낭독은 원문·분석 메뉴에서 작업 방식을 정하고 양수 길이를 사용한다. 권리 기록은 선택이다', testid: 's0-duration-min' },
       { text: '시리즈 이름이 있으면 적는다', testid: 's0-series' },
       { text: '작업 폴더 연결은 선택 사항이다. 폴더 없이 쓰면 내보내기에서 JSON 백업을 보관한다. 선택·권한 창은 운영자만 누른다', testid: 'app-folder-connect / app-export-link' },
       { text: '점검표 통과 후 운영자가 검토하고 완료 버튼을 누른다', testid: 's0-complete' },
